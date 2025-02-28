@@ -1,8 +1,4 @@
 using CollabSphere.Modules.Email.Config;
-using CollabSphere.Modules.TodoItem.Services;
-using CollabSphere.Modules.TodoItem.Services.Impl;
-using CollabSphere.Modules.TodoList.Services;
-using CollabSphere.Modules.TodoList.Services.Impl;
 using CollabSphere.Modules.User.Services;
 using CollabSphere.Modules.User.Services.Impl;
 
@@ -14,8 +10,6 @@ public static class AppModule
     {
         services.AddAuthServices(env);
 
-        services.AddSampleServices(env);
-
         services.RegisterAutoMapper();
 
         return services;
@@ -26,11 +20,7 @@ public static class AppModule
         services.AddScoped<IUserService, UserService>();
     }
 
-    private static void AddSampleServices(this IServiceCollection services, IWebHostEnvironment env)
-    {
-        services.AddScoped<ITodoItemService, TodoItemService>();
-        services.AddScoped<ITodoListService, TodoListService>();
-    }
+
 
     private static void RegisterAutoMapper(this IServiceCollection services)
     {

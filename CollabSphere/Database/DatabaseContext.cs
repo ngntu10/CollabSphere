@@ -1,6 +1,7 @@
 using System.Reflection;
 
 using CollabSphere.Common;
+using CollabSphere.Entities;
 using CollabSphere.Entities.Domain;
 using CollabSphere.Helpers;
 using CollabSphere.Modules.User.Config;
@@ -20,10 +21,9 @@ public class DatabaseContext : IdentityDbContext<ApplicationUser>
         _claimService = claimService;
     }
 
-    public DbSet<TodoItem> TodoItems { get; set; }
 
-    public DbSet<TodoList> TodoLists { get; set; }
-
+    public DbSet<User> Users {get; set;}
+    public DbSet<Post> Posts {get; set;}
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
@@ -37,12 +37,11 @@ public class DatabaseContext : IdentityDbContext<ApplicationUser>
             switch (entry.State)
             {
                 case EntityState.Added:
-                    entry.Entity.CreatedBy = ParseGuidString.ParseGuid(_claimService.GetUserId());
-                    entry.Entity.CreatedOn = DateTime.Now;
+
+                    entry.Entity.CreateAt= DateTime.Now;
                     break;
                 case EntityState.Modified:
-                    entry.Entity.UpdatedBy = ParseGuidString.ParseGuid(_claimService.GetUserId());
-                    entry.Entity.UpdatedOn = DateTime.Now;
+                    entry.Entity.UpdatedAt = DateTime.Now;
                     break;
             }
 
