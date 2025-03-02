@@ -16,7 +16,7 @@ public class UsersController : ApiController
         _userService = userService;
     }
 
-    [HttpPost("authenticate")]
+    [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> LoginAsync(LoginUserModel loginUserModel)
     {
