@@ -35,11 +35,11 @@ public class VoteConfiguration : IEntityTypeConfiguration<Vote>
         // Đảm bảo mỗi user chỉ vote một lần cho mỗi post
         builder.HasIndex(v => new { v.UserId, v.PostId })
             .IsUnique()
-            .HasFilter("[Post_id] IS NOT NULL");
+            .HasFilter("[PostId] IS NOT NULL");
 
         // Đảm bảo mỗi user chỉ vote một lần cho mỗi comment
         builder.HasIndex(v => new { v.UserId, v.CommentId })
             .IsUnique()
-            .HasFilter("[Comment_id] IS NOT NULL");
+            .HasFilter("[CommentId] IS NOT NULL");
     }
 }

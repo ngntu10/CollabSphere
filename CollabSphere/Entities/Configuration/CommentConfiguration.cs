@@ -24,11 +24,10 @@ public class CommentConfiguration : IEntityTypeConfiguration<Comment>
             .HasForeignKey(c => c.PostId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        // Cấu hình mối quan hệ tự tham chiếu (self-referencing): Comment - ChildComments
         builder.HasOne(c => c.ParentComment)
             .WithMany(c => c.ChildComments)
             .HasForeignKey(c => c.ParentCommentId)
-            .IsRequired(false) // Có thể là null cho root comments
+            .IsRequired(false)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

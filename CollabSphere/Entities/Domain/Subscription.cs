@@ -8,7 +8,7 @@ namespace CollabSphere.Entities.Domain
 
         public Guid SubredditId { get; set; }
 
-        public DateTime Subscribed_at { get; set; }
+        public DateTime SubscribedAt { get; set; }
 
         // Navigation properties
         public virtual User User { get; set; }

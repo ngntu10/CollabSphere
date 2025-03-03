@@ -8,7 +8,7 @@ namespace CollabSphere.Entities.Domain
 
         public Guid FollowingId { get; set; }
 
-        public DateTime Followed_at { get; set; }
+        public DateTime FollowedAt { get; set; }
 
         // Navigation properties
         public virtual User Follower { get; set; }

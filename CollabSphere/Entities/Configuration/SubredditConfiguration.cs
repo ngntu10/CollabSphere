@@ -18,9 +18,9 @@ public class SubredditConfiguration : IEntityTypeConfiguration<Subreddit>
         // Đảm bảo tên subreddit là duy nhất
         builder.HasIndex(s => s.Name).IsUnique();
 
-        // Cấu hình mối quan hệ 1-n: User - Created Subreddits
+        // Cấu hình mối quan hệ 1-n: User (Creator) - Subreddits
         builder.HasOne(s => s.Creator)
-            .WithMany() // Không có navigation property từ User
+            .WithMany()
             .HasForeignKey(s => s.CreatedBy)
             .OnDelete(DeleteBehavior.Restrict);
     }

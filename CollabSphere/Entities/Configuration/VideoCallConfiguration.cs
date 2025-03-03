@@ -21,7 +21,7 @@ namespace CollabSphere.Entities.Configuration
 
             // Cấu hình mối quan hệ 1-n: User (Receiver) - (không có navigation property)
             builder.HasOne(v => v.Receiver)
-                .WithMany() // Không có navigation property từ User
+                .WithMany()
                 .HasForeignKey(v => v.ReceiverId)
                 .OnDelete(DeleteBehavior.Restrict);
         }

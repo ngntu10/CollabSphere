@@ -9,6 +9,9 @@ public class FollowConfiguration : IEntityTypeConfiguration<Follow>
 {
     public void Configure(EntityTypeBuilder<Follow> builder)
     {
+        // Sửa từ snake_case sang PascalCase
+        builder.Property(f => f.FollowedAt).IsRequired();
+
         // Cấu hình mối quan hệ many-to-many giữa User với chính nó thông qua Follow
         builder.HasOne(f => f.Follower)
             .WithMany(u => u.Following)
