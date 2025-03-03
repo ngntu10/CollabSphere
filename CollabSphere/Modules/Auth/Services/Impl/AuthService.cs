@@ -12,20 +12,20 @@ using CollabSphere.Modules.User.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
-namespace CollabSphere.Modules.User.Services.Impl;
+namespace CollabSphere.Modules.Auth.Services.Impl;
 
-public class UserService : IUserService
+public class AuthService : IAuthService
 {
     private readonly IConfiguration _configuration;
     private readonly IEmailService _emailService;
     private readonly IMapper _mapper;
-    private readonly SignInManager<ApplicationUser> _signInManager;
+    private readonly SignInManager<Entities.Domain.User> _signInManager;
     private readonly ITemplateService _templateService;
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly UserManager<Entities.Domain.User> _userManager;
 
     public UserService(IMapper mapper,
-        UserManager<ApplicationUser> userManager,
-        SignInManager<ApplicationUser> signInManager,
+        UserManager<Entities.Domain.User> userManager,
+        SignInManager<Entities.Domain.User> signInManager,
         IConfiguration configuration,
         ITemplateService templateService,
         IEmailService emailService)
@@ -38,9 +38,9 @@ public class UserService : IUserService
         _emailService = emailService;
     }
 
-    public async Task<CreateUserResponseModel> CreateAsync(CreateUserModel createUserModel)
+    public async Task<LoginResponseModel> CreateAsync(CreateUserModel createUserModel)
     {
-        var user = _mapper.Map<ApplicationUser>(createUserModel);
+        var user = _mapper.Map<Entities.Domain.User>(createUserModel);
 
         var result = await _userManager.CreateAsync(user, createUserModel.Password);
 
@@ -48,16 +48,19 @@ public class UserService : IUserService
 
         var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-        var emailTemplate = await _templateService.GetTemplateAsync(TemplateConstants.ConfirmationEmail);
+        // var emailTemplate = await _templateService.GetTemplateAsync(TemplateConstants.ConfirmationEmail);
+        //
+        // var emailBody = _templateService.ReplaceInTemplate(emailTemplate,
+        //     new Dictionary<string, string> { { "{UserId}", user.Id }, { "{Token}", token } });
+        //
+        // await _emailService.SendEmailAsync(EmailMessage.Create(user.Email, emailBody, "[CollabSphere]Confirm your email"));
 
-        var emailBody = _templateService.ReplaceInTemplate(emailTemplate,
-            new Dictionary<string, string> { { "{UserId}", user.Id }, { "{Token}", token } });
-
-        await _emailService.SendEmailAsync(EmailMessage.Create(user.Email, emailBody, "[CollabSphere]Confirm your email"));
-
-        return new CreateUserResponseModel
+        var tokenResponse = JwtHelper.GenerateToken(user, _configuration);
+        return new LoginResponseModel
         {
-            Id = Guid.Parse((await _userManager.FindByNameAsync(user.UserName)).Id)
+            Token = tokenResponse.Token,
+            ExpiresAt = tokenResponse.ExpirationFormatted,
+            account = new AccountResponse(user.Id, user.UserName, user.Email)
         };
     }
 
@@ -73,13 +76,12 @@ public class UserService : IUserService
         if (!signInResult.Succeeded)
             throw new BadRequestException("Username or password is incorrect");
 
-        var token = JwtHelper.GenerateToken(user, _configuration);
-
+        var tokenResponse = JwtHelper.GenerateToken(user, _configuration);
         return new LoginResponseModel
         {
-            Username = user.UserName,
-            Email = user.Email,
-            Token = token
+            Token = tokenResponse.Token,
+            ExpiresAt = tokenResponse.ExpirationFormatted,
+            account = new AccountResponse(user.Id, user.UserName, user.Email)
         };
     }
 
@@ -89,7 +91,7 @@ public class UserService : IUserService
         var user = await _userManager.FindByIdAsync(userId.ToString());
 
         if (user == null)
-            throw new NotFoundException("User does not exist anymore");
+            throw new NotFoundException("Auth does not exist anymore");
 
         var result =
             await _userManager.ChangePasswordAsync(user, changePasswordModel.OldPassword,

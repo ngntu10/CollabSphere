@@ -1,13 +1,13 @@
 using CollabSphere.Common;
-using CollabSphere.Modules.User.Models;
+using CollabSphere.Modules.Auth.Models;
 
-namespace CollabSphere.Modules.User.Services;
+namespace CollabSphere.Modules.Auth.Services;
 
-public interface IUserService
+public interface IAuthService
 {
     Task<BaseResponseModel> ChangePasswordAsync(Guid userId, ChangePasswordModel changePasswordModel);
 
-    Task<CreateUserResponseModel> CreateAsync(CreateUserModel createUserModel);
+    Task<LoginResponseModel> CreateAsync(CreateUserModel createUserModel);
 
     Task<LoginResponseModel> LoginAsync(LoginUserModel loginUserModel);
 }
