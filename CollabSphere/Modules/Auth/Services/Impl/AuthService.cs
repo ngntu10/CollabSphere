@@ -3,11 +3,10 @@ using AutoMapper;
 using CollabSphere.Common;
 using CollabSphere.Exceptions;
 using CollabSphere.Helpers;
+using CollabSphere.Modules.Auth.Models;
 using CollabSphere.Modules.Email.Config;
 using CollabSphere.Modules.Email.Services;
 using CollabSphere.Modules.Template.Services;
-using CollabSphere.Modules.User.Config;
-using CollabSphere.Modules.User.Models;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +22,7 @@ public class AuthService : IAuthService
     private readonly ITemplateService _templateService;
     private readonly UserManager<Entities.Domain.User> _userManager;
 
-    public UserService(IMapper mapper,
+    public AuthService(IMapper mapper,
         UserManager<Entities.Domain.User> userManager,
         SignInManager<Entities.Domain.User> signInManager,
         IConfiguration configuration,
@@ -56,11 +55,11 @@ public class AuthService : IAuthService
         // await _emailService.SendEmailAsync(EmailMessage.Create(user.Email, emailBody, "[CollabSphere]Confirm your email"));
 
         var tokenResponse = JwtHelper.GenerateToken(user, _configuration);
-        return new LoginResponseModel
+        return new LoginResponseModel()
         {
-            Token = tokenResponse.Token,
-            ExpiresAt = tokenResponse.ExpirationFormatted,
-            account = new AccountResponse(user.Id, user.UserName, user.Email)
+            Token = tokenResponse,
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            account = new AccountResponse(user.Id.ToString(), user.UserName, user.Email)
         };
     }
 
@@ -79,9 +78,9 @@ public class AuthService : IAuthService
         var tokenResponse = JwtHelper.GenerateToken(user, _configuration);
         return new LoginResponseModel
         {
-            Token = tokenResponse.Token,
-            ExpiresAt = tokenResponse.ExpirationFormatted,
-            account = new AccountResponse(user.Id, user.UserName, user.Email)
+            Token = tokenResponse,
+            ExpiresAt = DateTime.UtcNow.AddDays(7),
+            account = new AccountResponse(user.Id.ToString(), user.UserName, user.Email)
         };
     }
 
@@ -102,7 +101,7 @@ public class AuthService : IAuthService
 
         return new BaseResponseModel
         {
-            Id = Guid.Parse(user.Id)
+            Id = user.Id
         };
     }
 }

@@ -15,7 +15,7 @@ public class ValidateModelAttribute : Attribute, IAsyncResultFilter
                 .SelectMany(modelState => modelState.Errors)
                 .Select(modelError => modelError.ErrorMessage);
 
-            context.Result = new BadRequestObjectResult(ApiResult<string>.Failure(StatusCodes.Status400BadRequest, errors));
+            context.Result = new BadRequestObjectResult(ApiResponse<string>.Failure(StatusCodes.Status400BadRequest, errors));
         }
 
         await next();

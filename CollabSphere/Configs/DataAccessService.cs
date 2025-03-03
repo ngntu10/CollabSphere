@@ -1,7 +1,7 @@
 using CollabSphere.Database;
 using CollabSphere.Infrastructures.Repositories;
 using CollabSphere.Infrastructures.Repositories.Impl;
-using CollabSphere.Modules.User.Config;
+using CollabSphere.Modules.Auth.Config;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

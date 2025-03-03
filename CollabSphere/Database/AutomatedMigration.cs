@@ -1,4 +1,4 @@
-using CollabSphere.Modules.User.Config;
+using CollabSphere.Modules.Auth.Config;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;

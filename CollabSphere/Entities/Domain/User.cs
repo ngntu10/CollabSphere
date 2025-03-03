@@ -4,7 +4,7 @@ namespace CollabSphere.Entities.Domain;
 
 public class User : BaseEntity, IAuditedEntity
 {
-    public string Username { get; set; }
+    public string UserName { get; set; }
 
     public string Email { get; set; }
 

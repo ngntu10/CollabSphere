@@ -1,11 +1,11 @@
-using CollabSphere.Modules.User.Config;
-using CollabSphere.Modules.User.Models;
+using CollabSphere.Modules.Auth.Config;
+using CollabSphere.Modules.Auth.Models;
 
 using FluentValidation;
 
 using Microsoft.AspNetCore.Identity;
 
-namespace CollabSphere.Modules.User.Validators;
+namespace CollabSphere.Modules.Auth.Validators;
 
 public class CreateUserModelValidator : AbstractValidator<CreateUserModel>
 {

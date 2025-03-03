@@ -46,7 +46,7 @@ public class ExceptionHandler : IExceptionHandler
             errors = new List<string> { "An error occurred while processing your request" };
         }
 
-        var result = JsonConvert.SerializeObject(ApiResult<string>.Failure(code, errors));
+        var result = JsonConvert.SerializeObject(ApiResponse<string>.Failure(code, errors));
 
         context.Response.ContentType = "application/json";
         context.Response.StatusCode = 200;

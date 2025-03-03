@@ -1,10 +1,10 @@
+using CollabSphere.Modules.Auth.Services;
+using CollabSphere.Modules.Auth.Services.Impl;
 using CollabSphere.Modules.Email.Config;
 using CollabSphere.Modules.TodoItem.Services;
 using CollabSphere.Modules.TodoItem.Services.Impl;
 using CollabSphere.Modules.TodoList.Services;
 using CollabSphere.Modules.TodoList.Services.Impl;
-using CollabSphere.Modules.User.Services;
-using CollabSphere.Modules.User.Services.Impl;
 
 namespace CollabSphere.Modules;
 
@@ -23,7 +23,7 @@ public static class AppModule
 
     private static void AddAuthServices(this IServiceCollection services, IWebHostEnvironment env)
     {
-        services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IAuthService, AuthService>();
     }
 
     private static void AddSampleServices(this IServiceCollection services, IWebHostEnvironment env)

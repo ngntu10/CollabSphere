@@ -1,4 +1,4 @@
-namespace CollabSphere.Modules.User.Validators;
+namespace CollabSphere.Modules.Auth.Validators;
 
 public static class UserValidatorConfiguration
 {

@@ -3,7 +3,7 @@ using System.Reflection;
 using CollabSphere.Common;
 using CollabSphere.Entities.Domain;
 using CollabSphere.Helpers;
-using CollabSphere.Modules.User.Config;
+using CollabSphere.Modules.Auth.Config;
 using CollabSphere.Shared.Claim;
 
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;

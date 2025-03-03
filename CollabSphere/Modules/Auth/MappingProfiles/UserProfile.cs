@@ -1,9 +1,9 @@
 using AutoMapper;
 
-using CollabSphere.Modules.User.Config;
-using CollabSphere.Modules.User.Models;
+using CollabSphere.Modules.Auth.Config;
+using CollabSphere.Modules.Auth.Models;
 
-namespace CollabSphere.Modules.User.MappingProfiles;
+namespace CollabSphere.Modules.Auth.MappingProfiles;
 
 public class UserProfile : Profile
 {

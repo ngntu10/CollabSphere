@@ -40,7 +40,7 @@ public static class JwtConfig
                 OnChallenge = async context =>
                 {
                     var result =
-                        JsonConvert.SerializeObject(ApiResult<string>.Failure(StatusCodes.Status401Unauthorized,
+                        JsonConvert.SerializeObject(ApiResponse<string>.Failure(StatusCodes.Status401Unauthorized,
                             ["Unauthorized"]));
 
                     context.HandleResponse();

@@ -1,6 +1,6 @@
 using CollabSphere.Common;
 
-namespace CollabSphere.Modules.User.Models;
+namespace CollabSphere.Modules.Auth.Models;
 
 public class CreateUserModel
 {

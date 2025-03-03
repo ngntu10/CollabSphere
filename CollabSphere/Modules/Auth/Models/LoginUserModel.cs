@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace CollabSphere.Modules.User.Models;
+namespace CollabSphere.Modules.Auth.Models;
 
 public class LoginUserModel
 {
@@ -18,7 +18,7 @@ public class LoginResponseModel
     public string Token { get; set; }
 
     [JsonPropertyName("expiresAt")]
-    public string ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     [JsonPropertyName("account")]
     public AccountResponse account { get; set; }

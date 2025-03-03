@@ -2,7 +2,8 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 
-using CollabSphere.Modules.User.Config;
+using CollabSphere.Entities.Domain;
+using CollabSphere.Modules.Auth.Config;
 
 using Microsoft.IdentityModel.Tokens;
 
@@ -10,7 +11,7 @@ namespace CollabSphere.Helpers;
 
 public static class JwtHelper
 {
-    public static string GenerateToken(ApplicationUser user, IConfiguration configuration)
+    public static string GenerateToken(User user, IConfiguration configuration)
     {
         var secretKey = configuration.GetValue<string>("JwtConfiguration:SecretKey");
 
@@ -22,7 +23,7 @@ public static class JwtHelper
         {
             Subject = new ClaimsIdentity(new[]
             {
-                new System.Security.Claims.Claim(ClaimTypes.NameIdentifier, user.Id),
+                new System.Security.Claims.Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new System.Security.Claims.Claim(ClaimTypes.Name, user.UserName),
                 new System.Security.Claims.Claim(ClaimTypes.Email, user.Email)
             }),

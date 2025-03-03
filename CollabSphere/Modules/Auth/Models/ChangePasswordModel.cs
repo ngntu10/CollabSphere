@@ -1,4 +1,4 @@
-namespace CollabSphere.Modules.User.Models;
+namespace CollabSphere.Modules.Auth.Models;
 
 public class ChangePasswordModel
 {

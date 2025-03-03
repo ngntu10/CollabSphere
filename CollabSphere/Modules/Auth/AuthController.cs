@@ -1,27 +1,27 @@
 using CollabSphere.Common;
-using CollabSphere.Modules.User.Models;
-using CollabSphere.Modules.User.Services;
+using CollabSphere.Modules.Auth.Models;
+using CollabSphere.Modules.Auth.Services;
 
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace CollabSphere.Modules.Account;
+namespace CollabSphere.Modules.Auth;
 
-public class UsersController : ApiController
+public class AuthController : ApiController
 {
-    private readonly IUserService _userService;
+    private readonly IAuthService _authService;
 
-    public UsersController(IUserService userService)
+    public AuthController(IAuthService authService)
     {
-        _userService = userService;
+        _authService = authService;
     }
 
     [HttpPost("login")]
     [AllowAnonymous]
     public async Task<IActionResult> LoginAsync(LoginUserModel loginUserModel)
     {
-        var result = await _userService.LoginAsync(loginUserModel);
+        var result = await _authService.LoginAsync(loginUserModel);
 
         return Ok(ApiResponse<LoginResponseModel>.Success(
             StatusCodes.Status200OK,
@@ -42,21 +42,25 @@ public class UsersController : ApiController
 
         return Ok(ApiResponse<BaseResponseModel>.Success(
             StatusCodes.Status200OK,
-            new BaseResponseModel { }));
+            new BaseResponseModel { },
+            ""
+            ));
     }
 
     [HttpPut("{id:guid}/changePassword")]
     public async Task<IActionResult> ChangePassword(Guid id, ChangePasswordModel changePasswordModel)
     {
         return Ok(ApiResponse<BaseResponseModel>.Success(StatusCodes.Status200OK,
-            await _userService.ChangePasswordAsync(id, changePasswordModel)));
+            await _authService.ChangePasswordAsync(id, changePasswordModel),
+            ""
+            ));
     }
 
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<IActionResult> RegisterAsync([FromBody] CreateUserModel model)
     {
-        var result = await _userService.CreateAsync(model);
+        var result = await _authService.CreateAsync(model);
 
         return Ok(ApiResponse<LoginResponseModel>.Success(
             StatusCodes.Status200OK,
