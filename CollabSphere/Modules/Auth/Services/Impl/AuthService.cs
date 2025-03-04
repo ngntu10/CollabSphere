@@ -1,6 +1,7 @@
 using AutoMapper;
 
 using CollabSphere.Common;
+using CollabSphere.Entities.Domain;
 using CollabSphere.Exceptions;
 using CollabSphere.Helpers;
 using CollabSphere.Modules.Auth.Models;
@@ -18,13 +19,13 @@ public class AuthService : IAuthService
     private readonly IConfiguration _configuration;
     private readonly IEmailService _emailService;
     private readonly IMapper _mapper;
-    private readonly SignInManager<Entities.Domain.User> _signInManager;
+    private readonly SignInManager<User> _signInManager;
     private readonly ITemplateService _templateService;
-    private readonly UserManager<Entities.Domain.User> _userManager;
+    private readonly UserManager<User> _userManager;
 
     public AuthService(IMapper mapper,
-        UserManager<Entities.Domain.User> userManager,
-        SignInManager<Entities.Domain.User> signInManager,
+        UserManager<User> userManager,
+        SignInManager<User> signInManager,
         IConfiguration configuration,
         ITemplateService templateService,
         IEmailService emailService)
@@ -39,7 +40,7 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponseModel> CreateAsync(CreateUserModel createUserModel)
     {
-        var user = _mapper.Map<Entities.Domain.User>(createUserModel);
+        var user = _mapper.Map<User>(createUserModel);
 
         var result = await _userManager.CreateAsync(user, createUserModel.Password);
 
@@ -101,7 +102,7 @@ public class AuthService : IAuthService
 
         return new BaseResponseModel
         {
-            Id = user.Id
+            Id = user.Id,
         };
     }
 }

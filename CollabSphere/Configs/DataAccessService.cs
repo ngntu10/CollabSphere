@@ -1,7 +1,7 @@
 using CollabSphere.Database;
+using CollabSphere.Entities.Domain;
 using CollabSphere.Infrastructures.Repositories;
 using CollabSphere.Infrastructures.Repositories.Impl;
-using CollabSphere.Modules.Auth.Config;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -39,7 +39,7 @@ public static class DataAccessService
 
     private static void AddIdentity(this IServiceCollection services)
     {
-        services.AddIdentity<ApplicationUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
+        services.AddIdentity<User, Role>(options => options.SignIn.RequireConfirmedAccount = false)
             .AddEntityFrameworkStores<DatabaseContext>()
             .AddSignInManager()
             .AddDefaultTokenProviders();

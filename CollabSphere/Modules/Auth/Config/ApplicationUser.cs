@@ -1,5 +1,5 @@
-using Microsoft.AspNetCore.Identity;
-
-namespace CollabSphere.Modules.Auth.Config;
-
-public class ApplicationUser : IdentityUser { }
+// using Microsoft.AspNetCore.Identity;
+//
+// namespace CollabSphere.Modules.Auth.Config;
+//
+// public class ApplicationUser : IdentityUser { }

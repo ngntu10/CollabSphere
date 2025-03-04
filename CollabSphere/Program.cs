@@ -1,6 +1,7 @@
 using CollabSphere;
 using CollabSphere.Configs;
 using CollabSphere.Database;
+using CollabSphere.Entities.Domain;
 using CollabSphere.Exceptions;
 using CollabSphere.Filters;
 using CollabSphere.Middleware;
@@ -9,6 +10,8 @@ using CollabSphere.Shared;
 
 using FluentValidation;
 using FluentValidation.AspNetCore;
+
+using Microsoft.AspNetCore.Identity;
 
 var builder = WebApplication.CreateBuilder(args);
 

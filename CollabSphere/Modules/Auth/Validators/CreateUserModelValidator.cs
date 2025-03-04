@@ -1,4 +1,4 @@
-using CollabSphere.Modules.Auth.Config;
+using CollabSphere.Entities.Domain;
 using CollabSphere.Modules.Auth.Models;
 
 using FluentValidation;
@@ -9,9 +9,9 @@ namespace CollabSphere.Modules.Auth.Validators;
 
 public class CreateUserModelValidator : AbstractValidator<CreateUserModel>
 {
-    private readonly UserManager<ApplicationUser> _userManager;
+    private readonly UserManager<User> _userManager;
 
-    public CreateUserModelValidator(UserManager<ApplicationUser> userManager)
+    public CreateUserModelValidator(UserManager<User> userManager)
     {
         _userManager = userManager;
 

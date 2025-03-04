@@ -3,7 +3,6 @@ using System.Security.Claims;
 using System.Text;
 
 using CollabSphere.Entities.Domain;
-using CollabSphere.Modules.Auth.Config;
 
 using Microsoft.IdentityModel.Tokens;
 

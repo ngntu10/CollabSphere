@@ -1,4 +1,4 @@
-using CollabSphere.Modules.Auth.Config;
+using CollabSphere.Entities.Domain;
 
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +13,7 @@ public static class AutomatedMigration
 
         if (context.Database.IsMySql()) await context.Database.MigrateAsync();
 
-        var userManager = services.GetRequiredService<UserManager<ApplicationUser>>();
+        var userManager = services.GetRequiredService<UserManager<User>>();
 
         await DatabaseContextSeed.SeedDatabaseAsync(context, userManager);
     }

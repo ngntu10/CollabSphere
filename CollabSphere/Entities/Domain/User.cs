@@ -1,20 +1,14 @@
 using CollabSphere.Common;
 
+using Microsoft.AspNetCore.Identity;
+
 namespace CollabSphere.Entities.Domain;
 
-public class User : BaseEntity, IAuditedEntity
+public class User : IdentityUser<Guid>, IAuditedEntity
 {
-    public string UserName { get; set; }
-
-    public string Email { get; set; }
-
-    public string PasswordHash { get; set; }
-
     public string AvatarUrl { get; set; }
 
     public int Reputation { get; set; }
-
-    public string Role { get; set; }
 
     // Navigation properties
     public virtual ICollection<Post> Posts { get; } = new List<Post>();
@@ -50,3 +44,5 @@ public class User : BaseEntity, IAuditedEntity
 
     public DateTime? UpdatedOn { get; set; }
 }
+
+public class Role : IdentityRole<Guid> { }
