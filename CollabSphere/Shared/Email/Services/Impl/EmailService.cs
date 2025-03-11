@@ -26,7 +26,7 @@ public class EmailService : IEmailService
 
         try
         {
-            await client.ConnectAsync(_smtpSettings.Server, _smtpSettings.Port, true);
+            await client.ConnectAsync(_smtpSettings.Server, _smtpSettings.Port, false);
             client.AuthenticationMechanisms.Remove("XOAUTH2");
             await client.AuthenticateAsync(_smtpSettings.Username, _smtpSettings.Password);
 
