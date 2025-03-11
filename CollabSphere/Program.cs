@@ -6,6 +6,8 @@ using CollabSphere.Exceptions;
 using CollabSphere.Filters;
 using CollabSphere.Middleware;
 using CollabSphere.Modules;
+using CollabSphere.Modules.Posts.Service;
+using CollabSphere.Modules.Posts.Service.Impl;
 using CollabSphere.Shared;
 
 using FluentValidation;
@@ -30,6 +32,8 @@ builder.Services.AddEmailConfiguration(builder.Configuration);
 builder.Services.AddExceptionHandler<ExceptionHandler>();
 
 builder.Services.AddProblemDetails();
+builder.Services.AddScoped<IPostService, PostService>();
+
 
 var app = builder.Build();
 
