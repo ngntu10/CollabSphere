@@ -10,6 +10,8 @@ public class User : IdentityUser<Guid>, IAuditedEntity
 
     public int Reputation { get; set; }
 
+    public DateTime? LastLoginDate { get; set; }
+
     // Navigation properties
     public virtual ICollection<Post> Posts { get; } = new List<Post>();
 

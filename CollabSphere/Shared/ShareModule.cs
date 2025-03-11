@@ -24,9 +24,9 @@ public static class SharedServiceDependencyInjection
 
         services.AddScoped<ITemplateService, TemplateService>();
 
-        if (env.IsDevelopment())
-            services.AddScoped<IEmailService, DevEmailService>();
-        else
-            services.AddScoped<IEmailService, EmailService>();
+        // if (env.IsDevelopment())
+        //     services.AddScoped<IEmailService, DevEmailService>();
+        // else
+        services.AddScoped<IEmailService, EmailService>();
     }
 }

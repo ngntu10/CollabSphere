@@ -48,12 +48,14 @@ public class AuthService : IAuthService
 
         var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
 
-        // var emailTemplate = await _templateService.GetTemplateAsync(TemplateConstants.ConfirmationEmail);
-        //
-        // var emailBody = _templateService.ReplaceInTemplate(emailTemplate,
-        //     new Dictionary<string, string> { { "{UserId}", user.Id }, { "{Token}", token } });
-        //
-        // await _emailService.SendEmailAsync(EmailMessage.Create(user.Email, emailBody, "[CollabSphere]Confirm your email"));
+        var emailTemplate = await _templateService.GetTemplateAsync(TemplateConstants.ConfirmationEmail);
+
+        string url = "http://localhost:3000/auth/email-verification" + token;
+
+        var emailBody = _templateService.ReplaceInTemplate(emailTemplate,
+            new Dictionary<string, string> { { "{UserId}", user.Id.ToString() }, { "{url}", url } });
+
+        await _emailService.SendEmailAsync(EmailMessage.Create(user.Email, emailBody, "[CollabSphere] Confirm your email"));
 
         var tokenResponse = JwtHelper.GenerateToken(user, _configuration);
         return new LoginResponseModel()
@@ -71,17 +73,23 @@ public class AuthService : IAuthService
         if (user == null)
             throw new NotFoundException("Username or password is incorrect");
 
+        var previousLoginDate = user.LastLoginDate;
+
         var signInResult = await _signInManager.PasswordSignInAsync(user, loginUserModel.Password, false, false);
 
         if (!signInResult.Succeeded)
             throw new BadRequestException("Username or password is incorrect");
+
+        user.LastLoginDate = DateTime.UtcNow;
+        await _userManager.UpdateAsync(user);
 
         var tokenResponse = JwtHelper.GenerateToken(user, _configuration);
         return new LoginResponseModel
         {
             Token = tokenResponse,
             ExpiresAt = DateTime.UtcNow.AddDays(7),
-            account = new AccountResponse(user.Id.ToString(), user.UserName, user.Email)
+            account = new AccountResponse(user.Id.ToString(), user.UserName, user.Email),
+            LastLoginDate = previousLoginDate
         };
     }
 

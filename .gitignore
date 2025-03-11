@@ -335,7 +335,7 @@ ASALocalRun/
 *.nvuser
 
 # MFractors (Xamarin productivity tool) working folder
-.mfractor/
+.mfractor/  
 
 # Local History for Visual Studio
 .localhistory/
@@ -350,3 +350,5 @@ MigrationBackup/
 .ionide/
 
 .idea/
+
+.env

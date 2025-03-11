@@ -8,10 +8,8 @@ public class TemplateService : ITemplateService
 
     public TemplateService()
     {
-        var projectPath = Directory.GetParent(Directory.GetCurrentDirectory()).FullName;
-        var templateProject = Assembly.GetExecutingAssembly().GetName().Name;
-
-        _templatesPath = Path.Combine(projectPath, templateProject, "Templates");
+        var projectPath = Directory.GetCurrentDirectory();
+        _templatesPath = Path.Combine(projectPath, "Shared", "Email", "Config");
     }
 
     public async Task<string> GetTemplateAsync(string templateName)

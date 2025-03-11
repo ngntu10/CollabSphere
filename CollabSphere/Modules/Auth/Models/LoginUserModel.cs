@@ -22,6 +22,9 @@ public class LoginResponseModel
 
     [JsonPropertyName("account")]
     public AccountResponse account { get; set; }
+
+    [JsonPropertyName("lastLoginDate")]
+    public DateTime? LastLoginDate { get; set; }
 }
 
 public class AccountResponse
