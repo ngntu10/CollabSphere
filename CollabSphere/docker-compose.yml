@@ -59,6 +59,15 @@ services:
             timeout: 5s
             retries: 5
             start_period: 30s
+    mailhog:
+        image: mailhog/mailhog:latest
+        container_name: collabsphere-mailhog
+        restart: always
+        ports:
+            - "8025:8025"
+            - "587:587"
+        networks:
+            - collabsphere-network
 
 networks:
     collabsphere-network:
