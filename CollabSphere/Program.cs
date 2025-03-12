@@ -7,7 +7,7 @@ using CollabSphere.Filters;
 using CollabSphere.Middleware;
 using CollabSphere.Modules;
 using CollabSphere.Modules.Posts.Service;
-using CollabSphere.Modules.Posts.Service.Impl;
+using CollabSphere.Modules.Posts.Service.Imp;
 using CollabSphere.Shared;
 
 using FluentValidation;

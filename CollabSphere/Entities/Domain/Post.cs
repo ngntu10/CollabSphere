@@ -6,7 +6,7 @@ public class Post : BaseEntity, IAuditedEntity
 {
     public string? Title { get; set; }
 
-
+    public required string Category { get; set; }
     public string? Content { get; set; }
 
     public string ThumbnailUrl { get; set; }

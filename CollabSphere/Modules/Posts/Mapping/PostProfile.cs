@@ -1,7 +1,7 @@
 using AutoMapper;
 
 using CollabSphere.Entities.Domain;
-using CollabSphere.Modules.Posts.Dtos;
+using CollabSphere.Modules.Posts.Models;
 
 namespace CollabSphere.Modules.Posts.Mapping
 {

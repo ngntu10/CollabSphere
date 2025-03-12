@@ -3,7 +3,7 @@ using System;
 using CollabSphere.Common;
 using CollabSphere.Entities.Domain;
 
-namespace CollabSphere.Modules.Posts.Dtos;
+namespace CollabSphere.Modules.Posts.Models;
 
 public class PostDto : BaseEntity
 {

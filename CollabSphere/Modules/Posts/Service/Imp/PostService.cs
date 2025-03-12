@@ -2,27 +2,32 @@ using System.Security.Claims;
 
 using AutoMapper;
 
+using CollabSphere.Common;
 using CollabSphere.Database;
 using CollabSphere.Entities.Domain;
 using CollabSphere.Exceptions;
-using CollabSphere.Modules.Posts.Dtos;
+using CollabSphere.Infrastructures.Repositories;
+using CollabSphere.Modules.Post.Models;
 using CollabSphere.Modules.Posts.Models;
 using CollabSphere.Modules.Posts.Service;
+using CollabSphere.Modules.Posts.Specifications;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
-namespace CollabSphere.Modules.Posts.Service.Impl;
+namespace CollabSphere.Modules.Posts.Service.Imp;
 
 public class PostService : IPostService
 {
     private readonly DatabaseContext _context;
     private readonly IMapper _mapper;
+    private readonly IBaseRepository<Entities.Domain.Post> _postRepository;
 
-    public PostService(DatabaseContext context, IMapper mapper)
+    public PostService(DatabaseContext context, IMapper mapper, IBaseRepository<Entities.Domain.Post> postRepository)
     {
         _context = context;
         _mapper = mapper;
+        _postRepository = postRepository;
     }
 
     public async Task<List<PostDto>> GetAllPostsAsync()
@@ -40,7 +45,7 @@ public class PostService : IPostService
         return _mapper.Map<PostDto>(post);
     }
 
-    public async Task<PostDto> CreatePostAsync(CreatePostDto createPostDto)
+    public async Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto)
     {
         if (createPostDto == null)
         {
@@ -60,7 +65,7 @@ public class PostService : IPostService
             _context.Posts.Add(post);
             await _context.SaveChangesAsync(); // EF tự động quản lý transaction
 
-            return _mapper.Map<PostDto>(post);
+            return post;
         }
         catch (DbUpdateException dbEx)
         {
@@ -146,8 +151,6 @@ public class PostService : IPostService
                 UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),
                 DownvoteCount = post.Votes.Count(v => v.VoteType == "downvote"),
                 ShareCount = post.Shares.Count,
-
-                // ✅ Chỉ hiển thị danh sách (không gán)
                 Comments = post.Comments,
                 Votes = post.Votes,
                 Shares = post.Shares,
@@ -158,6 +161,41 @@ public class PostService : IPostService
         return posts;
     }
 
+    public async Task<PaginationResponse<PostDto>> GetPaginatedPostsByUserId(Guid userId, PaginationRequest request)
+    {
+        var skip = (request.Page - 1) * request.PageSize;
+        var spec = PostSpecification.GetPaginatedPostsByUserId(userId, skip, request.PageSize);
+        var countSpec = PostSpecification.GetPostCountByUserId(userId);
 
+        var posts = await _postRepository.GetAllAsync(spec);
+        var total = await _postRepository.CountAsync(countSpec);
 
+        var postDtos = posts.Select(post => new PostDto
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Content = post.Content,
+            ThumbnailUrl = post.ThumbnailUrl,
+            CreatedBy = post.CreatedBy,
+            CreatedOn = post.CreatedOn,
+            UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),
+            DownvoteCount = post.Votes.Count(v => v.VoteType == "downvote"),
+            ShareCount = post.Shares.Count,
+            Comments = post.Comments,
+            Votes = post.Votes,
+            Shares = post.Shares,
+            Reports = post.Reports
+        }).ToList();
+
+        var totalPages = (int) Math.Ceiling(total / (double) request.PageSize);
+
+        return new PaginationResponse<PostDto>(
+            request.Page,
+            totalPages,
+            request.PageSize,
+            total,
+            postDtos
+        );
+    }
 }
+

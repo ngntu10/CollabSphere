@@ -1,6 +1,6 @@
 using CollabSphere.Common;
 using CollabSphere.Modules.Post.Models;
-using CollabSphere.Modules.Posts.Dtos;
+
 using CollabSphere.Modules.Posts.Models;
 using CollabSphere.Modules.Posts.Service;
 
@@ -91,15 +91,19 @@ public class PostController : ControllerBase
         ));
     }
     [HttpGet("user/{userId}")]
-    public async Task<IActionResult> GetAllPostByUserId(Guid userId)
-    {
-        var posts = await _postService.GetAllPostByUserId(userId);
 
-        return Ok(ApiResponse<List<PostDto>>.Success(
+
+    [HttpGet("user/{userId}/paginated")]
+    public async Task<IActionResult> GetPaginatedPostsByUserId(
+        Guid userId,
+        [FromQuery] PaginationRequest request)
+    {
+        var paginatedPosts = await _postService.GetPaginatedPostsByUserId(userId, request);
+
+        return Ok(ApiResponse<PaginationResponse<PostDto>>.Success(
             StatusCodes.Status200OK,
-            posts,
+            paginatedPosts,
             $"Lấy danh sách bài post của người dùng {userId} thành công"
         ));
     }
-
 }
