@@ -6,12 +6,15 @@ using CollabSphere.Exceptions;
 using CollabSphere.Filters;
 using CollabSphere.Middleware;
 using CollabSphere.Modules;
+using CollabSphere.Modules.Auth.Services;
+using CollabSphere.Modules.Auth.Services.Impl;
 using CollabSphere.Shared;
 
 using FluentValidation;
 using FluentValidation.AspNetCore;
 
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +29,8 @@ builder.Services.AddSharedService(builder.Environment);
 builder.Services.AddAppDependency(builder.Environment);
 
 builder.Services.AddEmailConfiguration(builder.Configuration);
+
+builder.Services.AddScoped<IEmailVerificationTokenService, EmailVerificationTokenService>();
 
 builder.Services.AddExceptionHandler<ExceptionHandler>();
 

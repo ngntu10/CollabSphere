@@ -45,6 +45,9 @@ public class User : IdentityUser<Guid>, IAuditedEntity
     public Guid UpdatedBy { get; set; }
 
     public DateTime? UpdatedOn { get; set; }
+
+    // Thuộc tính điều hướng 1-1
+    public virtual EmailVerificationToken EmailVerificationToken { get; set; }
 }
 
 public class Role : IdentityRole<Guid> { }
