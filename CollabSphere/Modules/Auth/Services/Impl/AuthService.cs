@@ -59,10 +59,9 @@ public class AuthService : IAuthService
 
         if (!result.Succeeded) throw new BadRequestException(result.Errors.FirstOrDefault()?.Description);
 
-        // var emailVerificationToken = _emailVerificationTokenService.CreateEmailTokenAsync(user).Result;
+        var emailVerificationToken = _emailVerificationTokenService.CreateEmailTokenAsync(user).Result;
         // var token = await _userManager.GenerateEmailConfirmationTokenAsync(user);
-        // var token = emailVerificationToken.Token;
-        var token = "";
+        var token = emailVerificationToken.Token;
         var emailTemplate = await _templateService.GetTemplateAsync(TemplateConstants.ConfirmationEmail);
 
         string url = "http://localhost:3000/auth/email-verification/" + token;

@@ -78,8 +78,8 @@ namespace CollabSphere.Migrations
 
                     b.Property<string>("Token")
                         .IsRequired()
-                        .HasMaxLength(128)
-                        .HasColumnType("varchar(128)");
+                        .HasMaxLength(256)
+                        .HasColumnType("varchar(256)");
 
                     b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
@@ -886,7 +886,7 @@ namespace CollabSphere.Migrations
             modelBuilder.Entity("CollabSphere.Entities.Domain.EmailVerificationToken", b =>
                 {
                     b.HasOne("CollabSphere.Entities.Domain.User", "User")
-                        .WithOne("EmailVerificationToken")
+                        .WithOne("VerificationToken")
                         .HasForeignKey("CollabSphere.Entities.Domain.EmailVerificationToken", "UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -1178,9 +1178,6 @@ namespace CollabSphere.Migrations
                 {
                     b.Navigation("Comments");
 
-                    b.Navigation("EmailVerificationToken")
-                        .IsRequired();
-
                     b.Navigation("Followers");
 
                     b.Navigation("Following");
@@ -1198,6 +1195,9 @@ namespace CollabSphere.Migrations
                     b.Navigation("Shares");
 
                     b.Navigation("Subscriptions");
+
+                    b.Navigation("VerificationToken")
+                        .IsRequired();
 
                     b.Navigation("VideoCalls");
 

@@ -37,6 +37,7 @@ public class User : IdentityUser<Guid>, IAuditedEntity
 
     public virtual ICollection<VideoCall> VideoCalls { get; } = new List<VideoCall>();
 
+    public virtual EmailVerificationToken VerificationToken { get; set; }
     // IAuditedEntity implementation
     public Guid CreatedBy { get; set; }
 
@@ -45,9 +46,6 @@ public class User : IdentityUser<Guid>, IAuditedEntity
     public Guid UpdatedBy { get; set; }
 
     public DateTime? UpdatedOn { get; set; }
-
-    // Thuộc tính điều hướng 1-1
-    public virtual EmailVerificationToken EmailVerificationToken { get; set; }
 }
 
 public class Role : IdentityRole<Guid> { }

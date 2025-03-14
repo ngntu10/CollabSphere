@@ -19,7 +19,7 @@ public class EmailVerificationTokenConfiguration : IEntityTypeConfiguration<Emai
             .IsRequired();
 
         builder.HasOne(e => e.User)
-            .WithOne(u => u.EmailVerificationToken)
+            .WithOne(u => u.VerificationToken)
             .HasForeignKey<EmailVerificationToken>(e => e.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 

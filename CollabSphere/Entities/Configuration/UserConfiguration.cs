@@ -15,7 +15,6 @@ namespace CollabSphere.Entities.Configuration
             builder.Property(u => u.Email).IsRequired().HasMaxLength(100);
             builder.Property(u => u.PasswordHash).IsRequired();
             builder.Property(u => u.AvatarUrl).IsRequired(false);
-            builder.Property(u => u.EmailVerificationToken).IsRequired(false);
             builder.HasIndex(u => u.UserName).IsUnique();
             builder.HasIndex(u => u.Email).IsUnique();
 
