@@ -11,5 +11,5 @@ public interface IAuthService
 
     Task<LoginResponseModel> LoginAsync(LoginUserModel loginUserModel);
 
-    void VerifyEmailAsync(string token);
+    Task VerifyEmailAsync(string token);
 }
