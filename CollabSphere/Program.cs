@@ -36,6 +36,21 @@ builder.Services.AddExceptionHandler<ExceptionHandler>();
 
 builder.Services.AddProblemDetails();
 
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:3000") // ⚠️ Chỉ định frontend của bạn
+                .AllowCredentials() // ⚠️ Quan trọng để gửi cookie
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        });
+});
+
+
 var app = builder.Build();
 
 using var scope = app.Services.CreateScope();
@@ -47,11 +62,7 @@ app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CollabSph
 
 app.UseHttpsRedirection();
 
-app.UseCors(corsPolicyBuilder =>
-    corsPolicyBuilder.AllowAnyOrigin()
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-);
+app.UseCors(MyAllowSpecificOrigins);
 
 app.UseRouting();
 

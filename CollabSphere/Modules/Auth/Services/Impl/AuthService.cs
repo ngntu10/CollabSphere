@@ -81,8 +81,8 @@ public class AuthService : IAuthService
 
         _httpContextAccessor.HttpContext.Response.Cookies.Append("access_token", tokenResponse, new CookieOptions
         {
-            HttpOnly = true,
-            Secure = true,
+            HttpOnly = false,
+            Secure = false,
             SameSite = SameSiteMode.Strict,
             Expires = DateTime.UtcNow.AddDays(7)
         });
@@ -114,11 +114,11 @@ public class AuthService : IAuthService
 
         var tokenResponse = JwtHelper.GenerateToken(user, _configuration);
 
-        _httpContextAccessor.HttpContext.Response.Cookies.Append("access_token", tokenResponse, new CookieOptions
+        _httpContextAccessor.HttpContext.Response.Cookies.Append("sessionToken", tokenResponse, new CookieOptions
         {
-            HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict,
+            HttpOnly = false,
+            Secure = false,
+            SameSite = SameSiteMode.None,
             Expires = DateTime.UtcNow.AddDays(7)
         });
 
