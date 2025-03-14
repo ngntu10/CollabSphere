@@ -37,6 +37,7 @@ public class User : IdentityUser<Guid>, IAuditedEntity
 
     public virtual ICollection<VideoCall> VideoCalls { get; } = new List<VideoCall>();
 
+    public virtual EmailVerificationToken VerificationToken { get; set; }
     // IAuditedEntity implementation
     public Guid CreatedBy { get; set; }
 

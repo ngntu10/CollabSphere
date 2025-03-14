@@ -33,18 +33,20 @@ public class AuthController : ApiController
     [HttpPost("logout")]
     public IActionResult Logout()
     {
+        // Xóa cookie ASP.NET Core Identity
         Response.Cookies.Delete("access_token", new CookieOptions
         {
             HttpOnly = true,
-            Secure = true,
-            SameSite = SameSiteMode.Strict
+            // Secure = true, // Chỉ nên true nếu bạn dùng HTTPS
+            SameSite = SameSiteMode.Strict,
+            Path = "/"
         });
 
         return Ok(ApiResponse<BaseResponseModel>.Success(
             StatusCodes.Status200OK,
             new BaseResponseModel { },
-            ""
-            ));
+            "Đăng xuất thành công"
+        ));
     }
 
     [HttpPut("{id:guid}/changePassword")]
@@ -66,6 +68,19 @@ public class AuthController : ApiController
             StatusCodes.Status200OK,
             result,
             "Đăng ký thành công"
+        ));
+    }
+
+    [HttpGet("email-verification/{token}")]
+    [AllowAnonymous]
+    public async Task<IActionResult> VerifyEmailAsync([FromRoute] string token)
+    {
+        _authService.VerifyEmailAsync(token);
+
+        return Ok(ApiResponse<BaseResponseModel>.Success(
+            StatusCodes.Status200OK,
+            new BaseResponseModel { },
+            "Email của bạn đã được xác thực"
         ));
     }
 }
