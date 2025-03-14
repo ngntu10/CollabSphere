@@ -21,6 +21,7 @@ namespace CollabSphere.Modules.Posts.Service
         Task<bool> DeletePostAsync(Guid id, Guid deletedByUserId);
         Task<List<PostDto>> GetAllPostByUserId(Guid userId);
         Task<PaginationResponse<PostDto>> GetPaginatedPostsByUserId(Guid userId, PaginationRequest request);
+        Task<bool> VotePostAsync(Guid postId, Guid userId, VoteType voteType);
     }
 }
 

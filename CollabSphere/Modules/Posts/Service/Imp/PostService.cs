@@ -136,10 +136,10 @@ public class PostService : IPostService
     {
         var posts = await _context.Posts
             .Where(post => post.CreatedBy == getPostByUserId)
-            .Include(post => post.Comments) // ✅ Lấy danh sách comments
-            .Include(post => post.Votes)    // ✅ Lấy danh sách votes
-            .Include(post => post.Shares)   // ✅ Lấy danh sách shares
-            .Include(post => post.Reports)  // ✅ Lấy danh sách reports
+            .Include(post => post.Comments)
+            .Include(post => post.Votes)
+            .Include(post => post.Shares)
+            .Include(post => post.Reports)
             .Select(post => new PostDto
             {
                 Id = post.Id,
@@ -197,5 +197,67 @@ public class PostService : IPostService
             postDtos
         );
     }
+
+    private async Task UpdatePostVoteCount(Guid postId)
+    {
+        var post = await _context.Posts.FindAsync(postId);
+        if (post == null)
+            return;
+        post.UpvoteCount = await _context.Votes.CountAsync(v => v.PostId == postId && v.VoteType == "Upvote");
+        post.DownvoteCount = await _context.Votes.CountAsync(v => v.PostId == postId && v.VoteType == "Downvote");
+
+        _context.Posts.Update(post);
+        await _context.SaveChangesAsync();
+    }
+    public async Task<bool> VotePostAsync(Guid postId, Guid userId, VoteType voteType)
+    {
+        var post = await _context.Posts.FindAsync(postId);
+        if (post == null)
+            throw new NotFoundException("Bài post không tồn tại");
+
+        var existingVote = await _context.Votes
+            .FirstOrDefaultAsync(v => v.PostId == postId && v.UserId == userId);
+
+        if (existingVote != null)
+        {
+            Console.WriteLine($"Existing Vote: {existingVote?.Id}, UserId: {existingVote?.UserId}, PostId: {existingVote?.PostId}, VoteType: {existingVote?.VoteType}");
+            if (existingVote.VoteType == voteType.ToString())
+            {
+                _context.Votes.Remove(existingVote);
+                await _context.SaveChangesAsync();
+                await UpdatePostVoteCount(postId);
+
+                return false;
+            }
+            existingVote.VoteType = voteType.ToString();
+            existingVote.UpdatedOn = DateTime.UtcNow;
+            existingVote.UpdatedBy = userId;
+            _context.Votes.Update(existingVote);
+        }
+        else
+        {
+            var vote = new Vote
+            {
+                Id = Guid.NewGuid(),
+                PostId = postId,
+                UserId = userId,
+                VoteType = voteType.ToString(),
+                CreatedBy = userId,
+                CreatedOn = DateTime.UtcNow,
+                UpdatedBy = userId,
+                UpdatedOn = DateTime.UtcNow
+            };
+            _context.Votes.Add(vote);
+
+            await _context.SaveChangesAsync();
+
+        }
+        await _context.SaveChangesAsync();
+        await UpdatePostVoteCount(postId);
+
+
+        return true;
+    }
+
 }
 
