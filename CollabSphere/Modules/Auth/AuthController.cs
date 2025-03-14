@@ -2,6 +2,8 @@ using CollabSphere.Common;
 using CollabSphere.Modules.Auth.Models;
 using CollabSphere.Modules.Auth.Services;
 
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -31,17 +33,15 @@ public class AuthController : ApiController
     }
 
     [HttpPost("logout")]
-    public IActionResult Logout()
+    public async Task<IActionResult> Logout()
     {
-        // Xóa cookie ASP.NET Core Identity
-        Response.Cookies.Delete("access_token", new CookieOptions
+        Response.Cookies.Delete("sessionToken", new CookieOptions
         {
-            HttpOnly = true,
-            // Secure = true, // Chỉ nên true nếu bạn dùng HTTPS
-            SameSite = SameSiteMode.Strict,
-            Path = "/"
+            Path = "/", // Đảm bảo trùng với Path của cookie lúc tạo
+            HttpOnly = false,
+            Secure = false,
+            SameSite = SameSiteMode.None
         });
-
         return Ok(ApiResponse<BaseResponseModel>.Success(
             StatusCodes.Status200OK,
             new BaseResponseModel { },
@@ -71,7 +71,7 @@ public class AuthController : ApiController
         ));
     }
 
-    [HttpGet("email-verification/{token}")]
+    [HttpPost("email-verification/{token}")]
     [AllowAnonymous]
     public async Task<IActionResult> VerifyEmailAsync([FromRoute] string token)
     {
