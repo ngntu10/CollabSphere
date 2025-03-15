@@ -4,6 +4,7 @@ using CollabSphere.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CollabSphere.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20250311145430_v4")]
+    partial class v4
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -65,34 +68,6 @@ namespace CollabSphere.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("Comments");
-                });
-
-            modelBuilder.Entity("CollabSphere.Entities.Domain.EmailVerificationToken", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("ExpirationDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("Token")
-                        .IsRequired()
-                        .HasMaxLength(256)
-                        .HasColumnType("varchar(256)");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Token")
-                        .IsUnique();
-
-                    b.HasIndex("UserId")
-                        .IsUnique();
-
-                    b.ToTable("EmailVerificationTokens", (string)null);
                 });
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.Follow", b =>
@@ -238,10 +213,6 @@ namespace CollabSphere.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -258,7 +229,7 @@ namespace CollabSphere.Migrations
                     b.Property<int>("ShareCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("SubredditId")
+                    b.Property<Guid>("SubredditId")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("ThumbnailUrl")
@@ -887,17 +858,6 @@ namespace CollabSphere.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("CollabSphere.Entities.Domain.EmailVerificationToken", b =>
-                {
-                    b.HasOne("CollabSphere.Entities.Domain.User", "User")
-                        .WithOne("VerificationToken")
-                        .HasForeignKey("CollabSphere.Entities.Domain.EmailVerificationToken", "UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("User");
-                });
-
             modelBuilder.Entity("CollabSphere.Entities.Domain.Follow", b =>
                 {
                     b.HasOne("CollabSphere.Entities.Domain.User", "Follower")
@@ -952,7 +912,8 @@ namespace CollabSphere.Migrations
                     b.HasOne("CollabSphere.Entities.Domain.Subreddit", "Subreddit")
                         .WithMany("Posts")
                         .HasForeignKey("SubredditId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("CollabSphere.Entities.Domain.User", "User")
                         .WithMany("Posts")
@@ -1198,9 +1159,6 @@ namespace CollabSphere.Migrations
                     b.Navigation("Shares");
 
                     b.Navigation("Subscriptions");
-
-                    b.Navigation("VerificationToken")
-                        .IsRequired();
 
                     b.Navigation("VideoCalls");
 

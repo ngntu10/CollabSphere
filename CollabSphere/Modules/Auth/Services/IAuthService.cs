@@ -10,4 +10,6 @@ public interface IAuthService
     Task<LoginResponseModel> CreateAsync(CreateUserModel createUserModel);
 
     Task<LoginResponseModel> LoginAsync(LoginUserModel loginUserModel);
+
+    Task VerifyEmailAsync(string token);
 }

@@ -1,0 +1,69 @@
+version: "3.8"
+
+services:
+    app:
+        container_name: collabsphere-app
+        image: ngntu10/collabsphere:latest
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - "8080:80"
+            - "8081:443"
+        environment:
+            - ASPNETCORE_ENVIRONMENT=Development
+            - Database__ConnectionString=Server=db;Database=collabsphere;User=root;Password=collabsphere;AllowPublicKeyRetrieval=true;Connect Timeout=60;
+            - ASPNETCORE_URLS=http://+:80
+            - ASPNETCORE_SWAGGER_ENABLED=true
+            # Vô hiệu hóa cấu hình HTTPS vì chứng chỉ chưa được tạo
+            # - ASPNETCORE_HTTPS_PORT=8081
+            # - ASPNETCORE_Kestrel__Certificates__Default__Password=collabsphere
+            # - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+        depends_on:
+            db:
+                condition: service_healthy
+        command: ["/wait-for-mysql.sh", "db", "dotnet", "CollabSphere.dll"]
+        networks:
+            - collabsphere-network
+        volumes:
+        - ~/Library/Application Support/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+        - ~/Library/Application Support/ASP.NET/Https:/root/.aspnet/https:ro
+
+
+    db:
+        image: mysql:8.0
+        container_name: collabsphere-mysql
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: collabsphere
+            MYSQL_DATABASE: collabsphere
+        ports:
+            - "3333:3306"
+        volumes:
+            - mysql-data:/var/lib/mysql
+        networks:
+            - collabsphere-network
+        command: --default-authentication-plugin=mysql_native_password
+        healthcheck:
+            test:
+                [
+                    "CMD",
+                    "mysqladmin",
+                    "ping",
+                    "-h",
+                    "localhost",
+                    "-u",
+                    "root",
+                    "-pcollabsphere",
+                ]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+            start_period: 30s
+
+networks:
+    collabsphere-network:
+        driver: bridge
+
+volumes:
+    mysql-data:

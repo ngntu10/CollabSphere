@@ -2,7 +2,7 @@ namespace CollabSphere.Common;
 
 public class PaginationRequest
 {
-    private const int MaxPageSize = 50;
+    private const int MaxPageSize = 20;
     private int _pageSize = 10;
     private int _page = 1;
 

@@ -10,6 +10,8 @@ public class User : IdentityUser<Guid>, IAuditedEntity
 
     public int Reputation { get; set; }
 
+    public DateTime? LastLoginDate { get; set; }
+
     // Navigation properties
     public virtual ICollection<Post> Posts { get; } = new List<Post>();
 
@@ -35,6 +37,7 @@ public class User : IdentityUser<Guid>, IAuditedEntity
 
     public virtual ICollection<VideoCall> VideoCalls { get; } = new List<VideoCall>();
 
+    public virtual EmailVerificationToken VerificationToken { get; set; }
     // IAuditedEntity implementation
     public Guid CreatedBy { get; set; }
 

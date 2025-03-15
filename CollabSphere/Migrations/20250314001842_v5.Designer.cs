@@ -4,6 +4,7 @@ using CollabSphere.Database;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CollabSphere.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    partial class DatabaseContextModelSnapshot : ModelSnapshot
+    [Migration("20250314001842_v5")]
+    partial class v5
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -238,10 +241,6 @@ namespace CollabSphere.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -258,7 +257,7 @@ namespace CollabSphere.Migrations
                     b.Property<int>("ShareCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("SubredditId")
+                    b.Property<Guid>("SubredditId")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("ThumbnailUrl")
@@ -952,7 +951,8 @@ namespace CollabSphere.Migrations
                     b.HasOne("CollabSphere.Entities.Domain.Subreddit", "Subreddit")
                         .WithMany("Posts")
                         .HasForeignKey("SubredditId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("CollabSphere.Entities.Domain.User", "User")
                         .WithMany("Posts")
