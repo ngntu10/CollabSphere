@@ -15,4 +15,6 @@ public interface IAuthService
     Task VerifyEmailAsync(string token);
 
     Task<User> GetCurrentUserAsync();
+
+    Task<(User user, DateTime expiresAt)> GetCurrentUserWithExpirationAsync();
 }

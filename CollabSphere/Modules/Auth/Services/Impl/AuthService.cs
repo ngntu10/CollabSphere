@@ -223,4 +223,41 @@ public class AuthService : IAuthService
             return null;
         }
     }
+
+    public async Task<(User user, DateTime expiresAt)> GetCurrentUserWithExpirationAsync()
+    {
+        try
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null || !httpContext.Request.Cookies.TryGetValue("sessionToken", out var token) || string.IsNullOrEmpty(token))
+            {
+                return (null, DateTime.MinValue);
+            }
+
+            var (principal, expiresAt) = JwtHelper.ValidateTokenWithExpiration(token, _configuration);
+            if (principal == null)
+            {
+                return (null, DateTime.MinValue);
+            }
+
+            if (expiresAt <= DateTime.UtcNow)
+            {
+                return (null, expiresAt);
+            }
+
+            var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return (null, expiresAt);
+            }
+
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            return (user, expiresAt);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi lấy thông tin người dùng và thời gian hết hạn");
+            return (null, DateTime.MinValue);
+        }
+    }
 }
