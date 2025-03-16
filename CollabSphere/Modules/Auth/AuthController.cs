@@ -83,4 +83,67 @@ public class AuthController : ApiController
             "Email của bạn đã được xác thực"
         ));
     }
+
+    [HttpGet("status")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAuthStatusAsync()
+    {
+        try
+        {
+            // Kiểm tra token trong cookie
+            if (!Request.Cookies.TryGetValue("sessionToken", out var token) || string.IsNullOrEmpty(token))
+            {
+                return Ok(ApiResponse<object>.Success(
+                    StatusCodes.Status200OK,
+                    new { isAuthenticated = false, sessionStatus = "noSession" },
+                    "Người dùng chưa đăng nhập"
+                ));
+            }
+
+            // Kiểm tra hạn token và lấy thông tin người dùng
+            var (user, expireTime) = await _authService.GetCurrentUserWithExpirationAsync();
+
+            if (user == null)
+            {
+                return Ok(ApiResponse<object>.Success(
+                    StatusCodes.Status200OK,
+                    new { isAuthenticated = false, sessionStatus = "expired" },
+                    "Phiên đăng nhập đã hết hạn"
+                ));
+            }
+
+            // Tính thời gian còn lại của phiên
+            TimeSpan remainingTime = expireTime - DateTime.UtcNow;
+            bool isAboutToExpire = remainingTime.TotalMinutes < 30; // Cảnh báo khi còn dưới 30 phút
+
+            var accountResponse = new AccountResponse(
+                user.Id.ToString(),
+                user.UserName,
+                user.Email
+            );
+
+            return Ok(ApiResponse<object>.Success(
+                StatusCodes.Status200OK,
+                new
+                {
+                    isAuthenticated = true,
+                    account = accountResponse,
+                    sessionStatus = isAboutToExpire ? "aboutToExpire" : "active",
+                    expiresAt = expireTime,
+                    remainingMinutes = Math.Max(0, (int) remainingTime.TotalMinutes)
+                },
+                isAboutToExpire
+                    ? "Phiên đăng nhập sắp hết hạn"
+                    : "Người dùng đã đăng nhập"
+            ));
+        }
+        catch (Exception ex)
+        {
+            return Ok(ApiResponse<object>.Success(
+                StatusCodes.Status200OK,
+                new { isAuthenticated = false, sessionStatus = "error" },
+                "Đã xảy ra lỗi khi kiểm tra trạng thái đăng nhập"
+            ));
+        }
+    }
 }
