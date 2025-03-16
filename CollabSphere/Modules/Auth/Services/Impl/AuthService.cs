@@ -1,4 +1,5 @@
 using System;
+using System.Security.Claims;
 using System.Threading.Tasks;
 
 using AutoMapper;
@@ -83,7 +84,7 @@ public class AuthService : IAuthService
         {
             HttpOnly = false,
             Secure = false,
-            SameSite = SameSiteMode.Strict,
+            SameSite = SameSiteMode.None,
             Expires = DateTime.UtcNow.AddDays(7)
         });
 
@@ -188,6 +189,38 @@ public class AuthService : IAuthService
                 _logger.LogError("Lỗi khi xác thực email: {ErrorMessage}", ex.Message);
                 throw;
             }
+        }
+    }
+
+    public async Task<User> GetCurrentUserAsync()
+    {
+        try
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            if (httpContext == null || !httpContext.Request.Cookies.TryGetValue("sessionToken", out var token) || string.IsNullOrEmpty(token))
+            {
+                return null;
+            }
+
+            var principal = JwtHelper.ValidateToken(token, _configuration);
+            if (principal == null)
+            {
+                return null;
+            }
+
+            var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+            {
+                return null;
+            }
+
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            return user;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Lỗi khi lấy thông tin người dùng hiện tại");
+            return null;
         }
     }
 }

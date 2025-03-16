@@ -83,4 +83,47 @@ public class AuthController : ApiController
             "Email của bạn đã được xác thực"
         ));
     }
+
+    [HttpGet("status")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetAuthStatusAsync()
+    {
+        try
+        {
+            var user = await _authService.GetCurrentUserAsync();
+
+            if (user == null)
+            {
+                return Ok(ApiResponse<object>.Success(
+                    StatusCodes.Status200OK,
+                    new { isAuthenticated = false },
+                    "Người dùng chưa đăng nhập"
+                ));
+            }
+
+            var accountResponse = new AccountResponse(
+                user.Id.ToString(),
+                user.UserName,
+                user.Email
+            );
+
+            return Ok(ApiResponse<object>.Success(
+                StatusCodes.Status200OK,
+                new
+                {
+                    isAuthenticated = true,
+                    account = accountResponse
+                },
+                "Người dùng đã đăng nhập"
+            ));
+        }
+        catch (Exception ex)
+        {
+            return Ok(ApiResponse<object>.Success(
+                StatusCodes.Status200OK,
+                new { isAuthenticated = false },
+                "Đã xảy ra lỗi khi kiểm tra trạng thái đăng nhập"
+            ));
+        }
+    }
 }
