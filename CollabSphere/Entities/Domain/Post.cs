@@ -4,16 +4,15 @@ namespace CollabSphere.Entities.Domain;
 
 public class Post : BaseEntity, IAuditedEntity
 {
-    public string? Title { get; set; }
+    public string Title { get; set; }
 
-    public required string Category { get; set; }
-    public string? Content { get; set; }
+    public string Content { get; set; }
 
     public string ThumbnailUrl { get; set; }
 
     public Guid UserId { get; set; }
 
-    public Guid? SubredditId { get; set; }
+    public Guid SubredditId { get; set; }
 
     public int UpvoteCount { get; set; }
 
