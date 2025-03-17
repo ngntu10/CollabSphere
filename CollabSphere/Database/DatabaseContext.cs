@@ -23,6 +23,7 @@ public class DatabaseContext : IdentityDbContext<User, Role, Guid>
 
     public DbSet<TodoList> TodoLists { get; set; }
 
+    public DbSet<EmailVerificationToken> EmailVerificationTokens { get; set; }
 
     public DbSet<Post> Posts { get; set; }
 

@@ -8,12 +8,15 @@ using CollabSphere.Middleware;
 using CollabSphere.Modules;
 using CollabSphere.Modules.Posts.Service;
 using CollabSphere.Modules.Posts.Service.Imp;
+using CollabSphere.Modules.Auth.Services;
+using CollabSphere.Modules.Auth.Services.Impl;
 using CollabSphere.Shared;
 
 using FluentValidation;
 using FluentValidation.AspNetCore;
 
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,10 +32,27 @@ builder.Services.AddAppDependency(builder.Environment);
 
 builder.Services.AddEmailConfiguration(builder.Configuration);
 
+builder.Services.AddScoped<IEmailVerificationTokenService, EmailVerificationTokenService>();
+
 builder.Services.AddExceptionHandler<ExceptionHandler>();
 
 builder.Services.AddProblemDetails();
 builder.Services.AddScoped<IPostService, PostService>();
+
+
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+        builder =>
+        {
+            builder.WithOrigins("http://localhost:3000") // ⚠️ Chỉ định frontend của bạn
+                .AllowCredentials() // ⚠️ Quan trọng để gửi cookie
+                .AllowAnyMethod()
+                .AllowAnyHeader();
+        });
+});
 
 
 var app = builder.Build();
@@ -46,11 +66,7 @@ app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CollabSph
 
 app.UseHttpsRedirection();
 
-app.UseCors(corsPolicyBuilder =>
-    corsPolicyBuilder.AllowAnyOrigin()
-        .AllowAnyMethod()
-        .AllowAnyHeader()
-);
+app.UseCors(MyAllowSpecificOrigins);
 
 app.UseRouting();
 

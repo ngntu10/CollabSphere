@@ -35,4 +35,72 @@ public static class JwtHelper
 
         return tokenHandler.WriteToken(token);
     }
+
+    public static ClaimsPrincipal ValidateToken(string token, IConfiguration configuration)
+    {
+        if (string.IsNullOrEmpty(token))
+            return null;
+
+        try
+        {
+            var secretKey = configuration.GetValue<string>("JwtConfiguration:SecretKey");
+            var key = Encoding.ASCII.GetBytes(secretKey);
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero
+            };
+
+            var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
+            return principal;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    public static (ClaimsPrincipal principal, DateTime expiresAt) ValidateTokenWithExpiration(string token, IConfiguration configuration)
+    {
+        if (string.IsNullOrEmpty(token))
+            return (null, DateTime.MinValue);
+
+        try
+        {
+            var secretKey = configuration.GetValue<string>("JwtConfiguration:SecretKey");
+            var key = Encoding.ASCII.GetBytes(secretKey);
+
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var validationParameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(key),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ValidateLifetime = false
+            };
+
+            var principal = tokenHandler.ValidateToken(token, validationParameters, out var validatedToken);
+
+            var jwtToken = validatedToken as JwtSecurityToken;
+            var expiryClaim = jwtToken?.Claims.FirstOrDefault(c => c.Type == "exp");
+
+            if (expiryClaim != null && long.TryParse(expiryClaim.Value, out var expiryTimestamp))
+            {
+                var expiryDate = DateTimeOffset.FromUnixTimeSeconds(expiryTimestamp).UtcDateTime;
+                return (principal, expiryDate);
+            }
+
+            return (principal, DateTime.MinValue);
+        }
+        catch
+        {
+            return (null, DateTime.MinValue);
+        }
+    }
 }
