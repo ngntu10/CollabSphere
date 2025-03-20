@@ -238,10 +238,6 @@ namespace CollabSphere.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .HasColumnType("longtext");
-
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -258,7 +254,7 @@ namespace CollabSphere.Migrations
                     b.Property<int>("ShareCount")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("SubredditId")
+                    b.Property<Guid>("SubredditId")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("ThumbnailUrl")
@@ -952,7 +948,8 @@ namespace CollabSphere.Migrations
                     b.HasOne("CollabSphere.Entities.Domain.Subreddit", "Subreddit")
                         .WithMany("Posts")
                         .HasForeignKey("SubredditId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.HasOne("CollabSphere.Entities.Domain.User", "User")
                         .WithMany("Posts")
