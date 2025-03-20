@@ -3,7 +3,7 @@ version: "3.8"
 services:
     app:
         container_name: collabsphere-app
-        image: ngntu10/collabsphere:latest
+        image: nghtai/collapsphere_v1:latest
         build:
             context: .
             dockerfile: Dockerfile
@@ -26,9 +26,8 @@ services:
         networks:
             - collabsphere-network
         volumes:
-        - ~/Library/Application Support/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
-        - ~/Library/Application Support/ASP.NET/Https:/root/.aspnet/https:ro
-
+            - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
+            - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
 
     db:
         image: mysql:8.0
