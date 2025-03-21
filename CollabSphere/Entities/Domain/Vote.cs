@@ -10,16 +10,15 @@ namespace CollabSphere.Entities.Domain
 
         public Guid? CommentId { get; set; }
 
-        public string VoteType { get; set; } // upvote/downvote
+        public string VoteType { get; set; }
 
-        // Navigation properties
         public virtual User User { get; set; }
 
         public virtual Post Post { get; set; }
 
         public virtual Comment Comment { get; set; }
 
-        // IAuditedEntity implementation
+
         public Guid CreatedBy { get; set; }
 
         public DateTime CreatedOn { get; set; }

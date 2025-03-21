@@ -352,3 +352,6 @@ MigrationBackup/
 .idea/
 
 .env
+launchSettings.json
+CollabSphere.sln
+appsettings.Development.json

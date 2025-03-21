@@ -8,6 +8,8 @@ using CollabSphere.Middleware;
 using CollabSphere.Modules;
 using CollabSphere.Modules.Auth.Services;
 using CollabSphere.Modules.Auth.Services.Impl;
+using CollabSphere.Modules.Posts.Service;
+using CollabSphere.Modules.Posts.Service.Imp;
 using CollabSphere.Shared;
 
 using FluentValidation;
@@ -35,7 +37,7 @@ builder.Services.AddScoped<IEmailVerificationTokenService, EmailVerificationToke
 builder.Services.AddExceptionHandler<ExceptionHandler>();
 
 builder.Services.AddProblemDetails();
-
+builder.Services.AddScoped<IPostService, PostService>();
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 builder.Services.AddCors(options =>
