@@ -8,6 +8,7 @@ using CollabSphere.Middleware;
 using CollabSphere.Modules;
 using CollabSphere.Modules.Auth.Services;
 using CollabSphere.Modules.Auth.Services.Impl;
+using CollabSphere.Modules.Chat.Services.Interfaces;
 using CollabSphere.Shared;
 
 using FluentValidation;
@@ -48,6 +49,18 @@ builder.Services.AddCors(options =>
                 .AllowAnyMethod()
                 .AllowAnyHeader();
         });
+});
+
+// builder.Services.AddScoped<IChatService, ChatService>();
+// builder.Services.AddScoped<IMessageService, MessageService>();
+
+// SignalR configuration
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+    options.MaximumReceiveMessageSize = 102400; // 100 KB
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
 });
 
 
