@@ -13,6 +13,7 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
         builder.Property(p => p.Title).IsRequired().HasMaxLength(200);
         builder.Property(p => p.Content).IsRequired();
         builder.Property(p => p.ThumbnailUrl).HasMaxLength(255);
+        builder.Property(p => p.Category).IsRequired().HasDefaultValue("General");
 
         // Cấu hình mối quan hệ 1-n: User - Posts
         builder.HasOne(p => p.User)

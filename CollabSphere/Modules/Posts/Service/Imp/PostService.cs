@@ -49,21 +49,39 @@ public class PostService : IPostService
     {
         if (createPostDto == null)
         {
-            throw new ArgumentNullException(nameof(createPostDto), "You should ");
+            throw new ArgumentNullException(nameof(createPostDto), "CreatePostDto không được null.");
         }
 
         try
         {
-            var post = _mapper.Map<CollabSphere.Entities.Domain.Post>(createPostDto) ?? throw new InvalidOperationException("Mapping failed.");
+            // Kiểm tra SubredditId trước khi ánh xạ và xử lý
+            if (createPostDto.SubredditId == Guid.Empty)
+            {
+                createPostDto.SubredditId = null; // Nếu không có subreddit, gán null
+            }
 
+            // Ánh xạ từ CreatePostDto sang Post
+            var post = _mapper.Map<CollabSphere.Entities.Domain.Post>(createPostDto)
+                    ?? throw new InvalidOperationException("Mapping failed.");
+
+            // Cập nhật các trường khác cho Post
             post.Id = Guid.NewGuid();
             post.CreatedOn = DateTime.UtcNow;
             post.UpvoteCount = 0;
             post.DownvoteCount = 0;
             post.ShareCount = 0;
 
+            // Xử lý PostImages nếu có
+            if (createPostDto.PostImages != null && createPostDto.PostImages.Any())
+            {
+                post.PostImages = createPostDto.PostImages
+                    .Select(imageId => new PostImages { ImageID = imageId })
+                    .ToList();
+            }
+
+            // Thêm Post vào DbContext và lưu vào cơ sở dữ liệu
             _context.Posts.Add(post);
-            await _context.SaveChangesAsync(); // EF tự động quản lý transaction
+            await _context.SaveChangesAsync(); // Lưu vào cơ sở dữ liệu
 
             return post;
         }
@@ -81,8 +99,6 @@ public class PostService : IPostService
             throw new Exception($"Unexpected error while creating post: {ex.Message}", ex);
         }
     }
-
-
 
     public async Task<PostResponseModel> UpdatePostAsync(Guid id, UpdatePostModel model, Guid updatedByUserId)
     {

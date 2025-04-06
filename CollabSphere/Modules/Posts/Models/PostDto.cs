@@ -10,8 +10,8 @@ public class PostDto : BaseEntity
 
     public string Title { get; set; }
     public string Content { get; set; }
-    public string ThumbnailUrl { get; set; }
-    public Guid SubredditId { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public Guid? SubredditId { get; set; }
     public Guid CreatedBy { get; set; }
     public DateTime CreatedOn { get; set; }
     public int UpvoteCount { get; set; }

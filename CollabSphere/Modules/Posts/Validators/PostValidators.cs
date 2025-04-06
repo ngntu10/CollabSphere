@@ -1,13 +1,11 @@
 using System;
-
-namespace CollabSphere.Modules.Posts.Validators;
-
-using System;
 using System.Text.RegularExpressions;
 
 using CollabSphere.Modules.Posts.Models;
 
 using FluentValidation;
+
+namespace CollabSphere.Modules.Posts.Validators;
 
 public class PostValidators : AbstractValidator<CreatePostDto>
 {
@@ -25,8 +23,9 @@ public class PostValidators : AbstractValidator<CreatePostDto>
             .Must(BeAValidImageUrl).When(post => !string.IsNullOrEmpty(post.ThumbnailUrl))
             .WithMessage("ThumbnailUrl phải là URL hợp lệ và có định dạng hình ảnh (.jpg, .png, .gif).");
 
+        // Cho phép SubredditId là null
         RuleFor(post => post.SubredditId)
-            .NotEmpty().WithMessage("SubredditId là bắt buộc.");
+            .Must(BeValidSubredditId).WithMessage("SubredditId phải là null hoặc một Guid hợp lệ không rỗng");
     }
 
     private bool BeAValidImageUrl(string url)
@@ -38,5 +37,10 @@ public class PostValidators : AbstractValidator<CreatePostDto>
 
         string pattern = @"\.(jpg|jpeg|png|gif)$"; // Regex kiểm tra đuôi file
         return Regex.IsMatch(url, pattern, RegexOptions.IgnoreCase);
+    }
+
+    private bool BeValidSubredditId(Guid? subredditId)
+    {
+        return !subredditId.HasValue || subredditId.Value != Guid.Empty;
     }
 }
