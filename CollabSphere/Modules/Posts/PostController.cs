@@ -34,15 +34,23 @@ public class PostController : ControllerBase
             ));
         }
 
+        // Tạo bài post thông qua service
         var post = await _postService.CreatePostAsync(createPostDto);
+        if (post == null)
+        {
+            return BadRequest(ApiResponse<object>.Failure(
+                StatusCodes.Status400BadRequest,
+                new List<string> { "Không thể tạo bài post" }
+            ));
+        }
 
+        // Tạo response
         var response = new CreatePostModel
         {
             Id = post.Id,
             Title = post.Title,
             Content = post.Content,
-            ThumbnailUrl = post.ThumbnailUrl,
-            SubredditId = post.SubredditId
+            PostImages = post.PostImages?.Select(x => x.ImageID ?? "").ToList() // Xử lý null cho ImageID
         };
 
         return Ok(ApiResponse<CreatePostModel>.Success(
@@ -51,6 +59,7 @@ public class PostController : ControllerBase
             "Đăng bài thành công"
         ));
     }
+
 
     [HttpPut("{id}/update")]
     public async Task<IActionResult> UpdatePost(Guid id, [FromBody] UpdatePostModel model)
