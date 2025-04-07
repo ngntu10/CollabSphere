@@ -1,7 +1,7 @@
 services:
     app:
         container_name: collabsphere-app
-        image: ngntu10/collabsphere:latest
+        image: ngntu10/collapsphere:latest
         build:
             context: .
             dockerfile: Dockerfile
