@@ -15,8 +15,6 @@ namespace CollabSphere.Entities.Domain
         // Navigation properties
         public virtual User Creator { get; set; }
 
-        public virtual ICollection<Post> Posts { get; } = new List<Post>();
-
         public virtual ICollection<Subscription> Subscriptions { get; } = new List<Subscription>();
 
         // IAuditedEntity implementation
