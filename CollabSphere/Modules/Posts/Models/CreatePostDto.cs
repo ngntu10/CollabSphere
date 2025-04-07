@@ -1,5 +1,3 @@
-using CollabSphere.Entities.Domain;
-
 namespace CollabSphere.Modules.Posts.Models
 {
 
@@ -8,8 +6,8 @@ namespace CollabSphere.Modules.Posts.Models
         public string Title { get; set; }
         public string Content { get; set; }
         public string Category { get; set; }
+        public string ThumbnailUrl { get; set; }
         public Guid UserId { get; set; }
-
-        public List<string>? PostImages { get; set; }
+        public Guid SubredditId { get; set; }
     }
 }

@@ -238,12 +238,6 @@ namespace CollabSphere.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<string>("Category")
-                        .IsRequired()
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("longtext")
-                        .HasDefaultValue("General");
-
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -259,6 +253,14 @@ namespace CollabSphere.Migrations
 
                     b.Property<int>("ShareCount")
                         .HasColumnType("int");
+
+                    b.Property<Guid>("SubredditId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -279,28 +281,11 @@ namespace CollabSphere.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("SubredditId");
+
                     b.HasIndex("UserId");
 
                     b.ToTable("Posts");
-                });
-
-            modelBuilder.Entity("CollabSphere.Entities.Domain.PostImages", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("ImageID")
-                        .HasColumnType("longtext");
-
-                    b.Property<Guid?>("PostId")
-                        .HasColumnType("char(36)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PostId");
-
-                    b.ToTable("PostImages");
                 });
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.Report", b =>
@@ -960,22 +945,21 @@ namespace CollabSphere.Migrations
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.Post", b =>
                 {
+                    b.HasOne("CollabSphere.Entities.Domain.Subreddit", "Subreddit")
+                        .WithMany("Posts")
+                        .HasForeignKey("SubredditId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.HasOne("CollabSphere.Entities.Domain.User", "User")
                         .WithMany("Posts")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("Subreddit");
+
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("CollabSphere.Entities.Domain.PostImages", b =>
-                {
-                    b.HasOne("CollabSphere.Entities.Domain.Post", "Post")
-                        .WithMany("PostImages")
-                        .HasForeignKey("PostId");
-
-                    b.Navigation("Post");
                 });
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.Report", b =>
@@ -1171,8 +1155,6 @@ namespace CollabSphere.Migrations
                 {
                     b.Navigation("Comments");
 
-                    b.Navigation("PostImages");
-
                     b.Navigation("Reports");
 
                     b.Navigation("Shares");
@@ -1182,6 +1164,8 @@ namespace CollabSphere.Migrations
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.Subreddit", b =>
                 {
+                    b.Navigation("Posts");
+
                     b.Navigation("Subscriptions");
                 });
 

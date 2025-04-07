@@ -8,11 +8,11 @@ public class Post : BaseEntity, IAuditedEntity
 
     public string Content { get; set; }
 
-    public string Category { get; set; }
-
+    public string ThumbnailUrl { get; set; }
 
     public Guid UserId { get; set; }
 
+    public Guid SubredditId { get; set; }
 
     public int UpvoteCount { get; set; }
 
@@ -23,7 +23,7 @@ public class Post : BaseEntity, IAuditedEntity
     // Navigation properties
     public virtual User User { get; set; }
 
-
+    public virtual Subreddit Subreddit { get; set; }
 
     public virtual ICollection<Comment> Comments { get; } = new List<Comment>();
 
@@ -34,7 +34,6 @@ public class Post : BaseEntity, IAuditedEntity
     public virtual ICollection<Report> Reports { get; } = new List<Report>();
 
     // IAuditedEntity implementation
-    public virtual ICollection<PostImages> PostImages { get; set; } = new List<PostImages>();
     public Guid CreatedBy { get; set; }
 
     public DateTime CreatedOn { get; set; }
