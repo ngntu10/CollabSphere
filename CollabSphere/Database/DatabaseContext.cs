@@ -27,8 +27,6 @@ public class DatabaseContext : IdentityDbContext<User, Role, Guid>
 
     public DbSet<Post> Posts { get; set; }
 
-    public DbSet<PostImages> PostImages { get; set; }
-
     public DbSet<Comment> Comments { get; set; }
 
     public DbSet<Follow> Follows { get; set; }
