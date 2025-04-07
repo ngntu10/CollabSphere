@@ -34,12 +34,6 @@ public class PostController : ControllerBase
             ));
         }
 
-        // Kiểm tra và xử lý SubredditId
-        if (createPostDto.SubredditId == Guid.Empty)
-        {
-            createPostDto.SubredditId = null;  // Xử lý null nếu không có giá trị hợp lệ
-        }
-
         // Tạo bài post thông qua service
         var post = await _postService.CreatePostAsync(createPostDto);
         if (post == null)
@@ -56,8 +50,6 @@ public class PostController : ControllerBase
             Id = post.Id,
             Title = post.Title,
             Content = post.Content,
-            ThumbnailUrl = post.ThumbnailUrl,
-            SubredditId = post.SubredditId,  // Truyền SubredditId từ Post
             PostImages = post.PostImages?.Select(x => x.ImageID ?? "").ToList() // Xử lý null cho ImageID
         };
 

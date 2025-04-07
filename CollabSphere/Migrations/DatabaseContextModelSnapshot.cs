@@ -238,6 +238,12 @@ namespace CollabSphere.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("longtext")
+                        .HasDefaultValue("General");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -253,14 +259,6 @@ namespace CollabSphere.Migrations
 
                     b.Property<int>("ShareCount")
                         .HasColumnType("int");
-
-                    b.Property<Guid?>("SubredditId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("ThumbnailUrl")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -280,8 +278,6 @@ namespace CollabSphere.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("SubredditId");
 
                     b.HasIndex("UserId");
 
@@ -964,18 +960,11 @@ namespace CollabSphere.Migrations
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.Post", b =>
                 {
-                    b.HasOne("CollabSphere.Entities.Domain.Subreddit", "Subreddit")
-                        .WithMany("Posts")
-                        .HasForeignKey("SubredditId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
                     b.HasOne("CollabSphere.Entities.Domain.User", "User")
                         .WithMany("Posts")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Subreddit");
 
                     b.Navigation("User");
                 });
@@ -1193,8 +1182,6 @@ namespace CollabSphere.Migrations
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.Subreddit", b =>
                 {
-                    b.Navigation("Posts");
-
                     b.Navigation("Subscriptions");
                 });
 

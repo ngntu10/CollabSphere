@@ -54,11 +54,15 @@ public class PostService : IPostService
 
         try
         {
-            // Kiểm tra SubredditId trước khi ánh xạ và xử lý
-            if (createPostDto.SubredditId == Guid.Empty)
-            {
-                createPostDto.SubredditId = null; // Nếu không có subreddit, gán null
-            }
+            // Validate required fields
+            if (string.IsNullOrEmpty(createPostDto.Title))
+                throw new ArgumentException("Title is required");
+
+            if (string.IsNullOrEmpty(createPostDto.Category))
+                throw new ArgumentException("Category is required");
+            if (createPostDto.UserId == Guid.Empty)
+                throw new ArgumentException("UserId is required");
+
 
             // Ánh xạ từ CreatePostDto sang Post
             var post = _mapper.Map<CollabSphere.Entities.Domain.Post>(createPostDto)
@@ -70,7 +74,7 @@ public class PostService : IPostService
             post.UpvoteCount = 0;
             post.DownvoteCount = 0;
             post.ShareCount = 0;
-
+            post.CreatedBy = createPostDto.UserId;
             // Xử lý PostImages nếu có
             if (createPostDto.PostImages != null && createPostDto.PostImages.Any())
             {
@@ -112,7 +116,6 @@ public class PostService : IPostService
 
         post.Title = model.Title;
         post.Content = model.Content;
-        post.ThumbnailUrl = model.ThumbnailUrl;
         post.UpdatedOn = DateTime.UtcNow;
         post.UpdatedBy = updatedByUserId; // Lưu GUID của user
 
@@ -124,8 +127,6 @@ public class PostService : IPostService
             Id = post.Id,
             Title = post.Title,
             Content = post.Content,
-            ThumbnailUrl = post.ThumbnailUrl,
-            SubredditId = post.SubredditId,
             UpdatedBy = post.UpdatedBy,
             UpdatedOn = post.UpdatedOn,
             UpdatedByUsername = updatedUser.UserName
@@ -161,7 +162,6 @@ public class PostService : IPostService
                 Id = post.Id,
                 Title = post.Title,
                 Content = post.Content,
-                ThumbnailUrl = post.ThumbnailUrl,
                 CreatedBy = post.CreatedBy,
                 CreatedOn = post.CreatedOn,
                 UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),
@@ -191,7 +191,6 @@ public class PostService : IPostService
             Id = post.Id,
             Title = post.Title,
             Content = post.Content,
-            ThumbnailUrl = post.ThumbnailUrl,
             CreatedBy = post.CreatedBy,
             CreatedOn = post.CreatedOn,
             UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),

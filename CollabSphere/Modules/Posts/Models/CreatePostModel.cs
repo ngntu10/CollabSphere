@@ -11,9 +11,8 @@ public class CreatePostModel
     public string Title { get; set; }
     public string Content { get; set; }
     public string Category { get; set; }
-    public string? ThumbnailUrl { get; set; }
     public Guid UserId { get; set; }
-    public Guid? SubredditId { get; set; }
+
     public int UpvoteCount { get; set; } = 0;
     public int DownvoteCount { get; set; } = 0;
     public int ShareCount { get; set; } = 0;
