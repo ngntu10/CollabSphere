@@ -16,9 +16,8 @@ namespace CollabSphere.Entities.Domain
 
         public bool ReadStatus { get; set; }
 
-        public string MessageType { get; set; } // text, image, etc.
+        public string MessageType { get; set; }
 
-        // Navigation properties
         public virtual User Sender { get; set; }
 
         public virtual User Receiver { get; set; }

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Threading.Tasks;
 
 using CollabSphere.Entities.Domain;
@@ -11,10 +12,37 @@ namespace CollabSphere.Modules.Chat.Hubs
     public class ChatHub : Hub
     {
         private readonly IMessageService _messageService;
-
+        private static readonly ConcurrentDictionary<string, string> _activeUsers = new ConcurrentDictionary<string, string>();
         public ChatHub(IMessageService messageService)
         {
             _messageService = messageService;
+        }
+
+        public override async Task OnConnectedAsync()
+        {
+            string userId = Context.GetHttpContext()?.Request.Query["userId"].ToString();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                _activeUsers.TryAdd(userId, userId);
+            }
+
+            await Clients.All.SendAsync("UpdateActiveUsers", _activeUsers.Keys.ToList());
+
+            await base.OnConnectedAsync();
+        }
+
+        public override async Task OnDisconnectedAsync(Exception exception)
+        {
+            string userId = Context.GetHttpContext()?.Request.Query["userId"].ToString();
+            if (!string.IsNullOrEmpty(userId))
+            {
+                _activeUsers.TryRemove(userId, out _);
+            }
+
+            // Gửi danh sách người dùng active cho tất cả client
+            await Clients.All.SendAsync("UpdateActiveUsers", _activeUsers.Keys.ToList());
+
+            await base.OnDisconnectedAsync(exception);
         }
 
         public async Task JoinRoom(string roomId, string senderId, string receiverId)
