@@ -104,9 +104,12 @@ public class PostService : IPostService
         }
     }
 
-    public async Task<PostResponseModel> UpdatePostAsync(Guid id, UpdatePostModel model, Guid updatedByUserId)
+    public async Task<PostResponseModel> UpdatePostAsync(Guid id, UpdatePostDto model, Guid updatedByUserId)
     {
-        var post = await _context.Posts.FindAsync(id);
+        var post = await _context.Posts
+            .Include(p => p.PostImages) // Load ảnh hiện tại
+            .FirstOrDefaultAsync(p => p.Id == id);
+
         if (post == null)
             throw new KeyNotFoundException("Bài post không tồn tại");
 
@@ -114,12 +117,39 @@ public class PostService : IPostService
         if (updatedUser == null)
             throw new KeyNotFoundException("Người dùng không tồn tại");
 
+        // Cập nhật title, content, audit info
         post.Title = model.Title;
         post.Content = model.Content;
         post.UpdatedOn = DateTime.UtcNow;
-        post.UpdatedBy = updatedByUserId; // Lưu GUID của user
+        post.UpdatedBy = updatedByUserId;
 
-        _context.Posts.Update(post);
+        // Xử lý ảnh: xoá ảnh được đánh dấu
+        if (model.PostImages != null && model.PostImages.Any())
+        {
+            foreach (var imgDto in model.PostImages)
+            {
+                if (imgDto.Id != null && imgDto.IsDeleted)
+                {
+                    var existingImage = post.PostImages.FirstOrDefault(x => x.Id == imgDto.Id.Value);
+                    if (existingImage != null)
+                    {
+                        _context.PostImages.Remove(existingImage);
+                    }
+                }
+
+                if (imgDto.Id == null && !imgDto.IsDeleted)
+                {
+                    var newImage = new PostImages
+                    {
+                        Id = Guid.NewGuid(),
+                        ImageID = imgDto.ImageID,
+                        PostId = post.Id
+                    };
+                    post.PostImages.Add(newImage);
+                }
+            }
+        }
+
         await _context.SaveChangesAsync();
 
         return new PostResponseModel
@@ -132,6 +162,7 @@ public class PostService : IPostService
             UpdatedByUsername = updatedUser.UserName
         };
     }
+
 
 
 
@@ -273,6 +304,72 @@ public class PostService : IPostService
 
         return true;
     }
+    public async Task<List<PostDto>> GetHomePostsAsync(int pageNumber, int pageSize)
+    {
+        return await _context.Posts
+            .OrderByDescending(p => p.CreatedOn)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Include(p => p.Comments)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Select(p => new PostDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Content = p.Content,
+                CreatedBy = p.CreatedBy,
+                CreatedOn = p.CreatedOn,
+                UpvoteCount = p.UpvoteCount,
+                DownvoteCount = p.DownvoteCount,
+                ShareCount = p.ShareCount,
+
+                Comments = p.Comments,
+                Votes = p.Votes,
+                Shares = p.Shares,
+                Reports = p.Reports
+            })
+            .AsNoTracking()
+            .ToListAsync();
+    }
+
+
+    public async Task<List<PostDto>> GetPopularPostsAsync(int pageNumber, int pageSize)
+    {
+        return await _context.Posts
+            .Include(p => p.Comments)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .AsNoTracking()
+            .Select(p => new
+            {
+                Post = p,
+                PopularityScore = p.UpvoteCount + p.Comments.Count // có thể cân chỉnh lại tùy chiến lược
+            })
+            .OrderByDescending(x => x.PopularityScore)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new PostDto
+            {
+                Id = x.Post.Id,
+                Title = x.Post.Title,
+                Content = x.Post.Content,
+                CreatedBy = x.Post.CreatedBy,
+                CreatedOn = x.Post.CreatedOn,
+                UpvoteCount = x.Post.UpvoteCount,
+                DownvoteCount = x.Post.DownvoteCount,
+                ShareCount = x.Post.ShareCount,
+                Comments = x.Post.Comments,
+                Votes = x.Post.Votes,
+                Shares = x.Post.Shares,
+                Reports = x.Post.Reports
+            })
+            .ToListAsync();
+    }
+
+
 
 }
 
