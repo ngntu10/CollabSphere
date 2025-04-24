@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("CollabSphere")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+578f317ef871a49ce1586bc706731595585946cf")]
 [assembly: System.Reflection.AssemblyProductAttribute("CollabSphere")]
 [assembly: System.Reflection.AssemblyTitleAttribute("CollabSphere")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
