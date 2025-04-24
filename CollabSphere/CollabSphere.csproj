@@ -47,6 +47,7 @@
 
     <ItemGroup>
       <Folder Include="Entities\Enums\" />
+      <Folder Include="Modules\Chat\Models\" />
     </ItemGroup>
 
     <Target Name="Husky" BeforeTargets="Restore;CollectPackageReferences" Condition="'$(HUSKY)' != 0">
