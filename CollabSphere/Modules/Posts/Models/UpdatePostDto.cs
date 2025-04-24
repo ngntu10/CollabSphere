@@ -6,5 +6,6 @@ public class UpdatePostDto
 {
     public string Title { get; set; }
     public string Content { get; set; }
-    public string ThumbnailUrl { get; set; }
+
+    public List<PostImageDto> PostImages { get; set; } = new();
 }
