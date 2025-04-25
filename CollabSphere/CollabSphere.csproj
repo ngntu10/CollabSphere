@@ -47,6 +47,7 @@
 
     <ItemGroup>
       <Folder Include="Entities\Enums\" />
+      <Folder Include="Modules/Comment/Validators/" />
       <Folder Include="Modules\Chat\Models\" />
     </ItemGroup>
 

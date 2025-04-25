@@ -19,7 +19,7 @@ public class PostDto : BaseEntity
     public int DownvoteCount { get; set; }
 
     public int ShareCount { get; set; }
-    public virtual ICollection<Comment> Comments { get; set; } = new List<Comment>();
+    public virtual ICollection<CollabSphere.Entities.Domain.Comment> Comments { get; set; } = new List<CollabSphere.Entities.Domain.Comment>();
 
     public virtual ICollection<Vote> Votes { get; set; } = new List<Vote>();
 
