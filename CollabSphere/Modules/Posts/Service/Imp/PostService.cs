@@ -369,7 +369,40 @@ public class PostService : IPostService
             .ToListAsync();
     }
 
+    public async Task<List<PostDto>> GetRecentPostsFromFollowedUsersAsync(Guid userId, int count = 3)
+    {
+        // Get the list of users that the current user is following
+        var followedUserIds = await _context.Follows
+            .Where(uf => uf.FollowerId == userId)
+            .Select(uf => uf.FollowingId)
+            .ToListAsync();
 
-
+        // Get the most recent posts from those users
+        return await _context.Posts
+            .Where(p => followedUserIds.Contains(p.CreatedBy))
+            .Include(p => p.Comments)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .OrderByDescending(p => p.CreatedOn)
+            .Take(count)
+            .Select(p => new PostDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Content = p.Content,
+                CreatedBy = p.CreatedBy,
+                CreatedOn = p.CreatedOn,
+                UpvoteCount = p.UpvoteCount,
+                DownvoteCount = p.DownvoteCount,
+                ShareCount = p.ShareCount,
+                Comments = p.Comments,
+                Votes = p.Votes,
+                Shares = p.Shares,
+                Reports = p.Reports
+            })
+            .AsNoTracking()
+            .ToListAsync();
+    }
 }
 
