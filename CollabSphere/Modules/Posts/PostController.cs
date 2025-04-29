@@ -230,5 +230,16 @@ public class PostController : ControllerBase
         return Ok(posts);
     }
 
+    [HttpGet("recent-followed")]
+    public async Task<IActionResult> GetRecentPostsFromFollowedUsers()
+    {
+        var userId = User.GetUserId();
+        var posts = await _postService.GetRecentPostsFromFollowedUsersAsync(userId);
 
+        return Ok(ApiResponse<List<PostDto>>.Success(
+            StatusCodes.Status200OK,
+            posts,
+            "Lấy danh sách bài post mới nhất từ người dùng đang theo dõi thành công"
+        ));
+    }
 }
