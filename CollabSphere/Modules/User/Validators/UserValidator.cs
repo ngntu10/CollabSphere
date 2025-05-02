@@ -36,7 +36,7 @@ namespace CollabSphere.Modules.User.Validators
                 .MaximumLength(30).WithMessage("Tên không được vượt quá 30 ký tự");
 
             RuleFor(x => x.Gender)
-                .NotEmpty().WithMessage("Giới tính không được để trống")
+                .NotEmpty().WithMessage("Giới tính không được để trống");
 
             RuleFor(x => x.Email)
                 .NotEmpty().WithMessage("Email không được để trống")
