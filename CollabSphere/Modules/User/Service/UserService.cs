@@ -21,7 +21,7 @@ namespace CollabSphere.Modules.User.Service
     {
         Task<UserDto> GetUserByIdAsync(Guid Id);
         Task<IEnumerable<UserDto>> GetAllUsersAsync();
-        Task<Entities.Domain.User> CreateUserAsync(CreateUserDto createUserDto);
+        // Task<Entities.Domain.User> CreateUserAsync(CreateUserDto createUserDto);
         Task<UserResponseModel> UpdateUserAsync(Guid id, UpdateUserDto updateDto, Guid updatedById);
     }
 
@@ -52,28 +52,28 @@ namespace CollabSphere.Modules.User.Service
             return _mapper.Map<IEnumerable<UserDto>>(users);
         }
 
-        public async Task<Entities.Domain.User> CreateUserAsync(CreateUserDto createUserDto)
-        {
-            if (createUserDto == null)
-                throw new ArgumentNullException(nameof(createUserDto), "CreateUserDto không được null.");
+        // public async Task<Entities.Domain.User> CreateUserAsync(CreateUserDto createUserDto)
+        // {
+        //     if (createUserDto == null)
+        //         throw new ArgumentNullException(nameof(createUserDto), "CreateUserDto không được null.");
 
-            var user = _mapper.Map<Entities.Domain.User>(createUserDto)
-                ?? throw new InvalidOperationException("Mapping failed.");
+        //     var user = _mapper.Map<Entities.Domain.User>(createUserDto)
+        //         ?? throw new InvalidOperationException("Mapping failed.");
 
-            user.Id = Guid.NewGuid();
-            user.UserName = createUserDto.UserName;
-            user.Email = createUserDto.Email;
-            user.PhoneNumber = createUserDto.PhoneNumber;
-            user.AvatarId = createUserDto.AvatarId;
-            user.Gender = createUserDto.Gender;
-            user.CreatedOn = DateTime.UtcNow;
-            user.UpdatedOn = DateTime.UtcNow;
+        //     user.Id = Guid.NewGuid();
+        //     user.UserName = createUserDto.UserName;
+        //     user.Email = createUserDto.Email;
+        //     user.PhoneNumber = createUserDto.PhoneNumber;
+        //     user.AvatarId = createUserDto.AvatarId;
+        //     user.Gender = createUserDto.Gender;
+        //     user.CreatedOn = DateTime.UtcNow;
+        //     user.UpdatedOn = DateTime.UtcNow;
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
+        //     _context.Users.Add(user);
+        //     await _context.SaveChangesAsync();
 
-            return user;
-        }
+        //     return user;
+        // }
 
         public async Task<UserResponseModel> UpdateUserAsync(Guid id, UpdateUserDto updateDto, Guid updatedById)
         {
@@ -95,9 +95,9 @@ namespace CollabSphere.Modules.User.Service
             return new UserResponseModel
             {
                 Id = user.Id,
-                Name = user.UserName,
+                UserName = user.UserName,
                 Email = user.Email,
-                Phone = user.PhoneNumber,
+                PhoneNumber = user.PhoneNumber,
                 AvatarId = user.AvatarId,
                 Gender = user.Gender,
                 UpdatedOn = user.UpdatedOn,

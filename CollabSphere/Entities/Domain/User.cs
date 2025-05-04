@@ -10,8 +10,6 @@ public class User : IdentityUser<Guid>, IAuditedEntity
 
     public DateTime? LastLoginDate { get; set; }
 
-    public string Phone { get; set; }
-
     public string Gender { get; set; }
 
     public string AvatarId { get; set; }
