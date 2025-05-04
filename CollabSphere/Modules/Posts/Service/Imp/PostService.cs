@@ -32,14 +32,27 @@ public class PostService : IPostService
 
     public async Task<List<PostDto>> GetAllPostsAsync()
     {
+        var posts = await _context.Posts
+            .Include(p => p.Comments)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .ToListAsync();
 
-        var posts = await _context.Posts.ToListAsync();
         return _mapper.Map<List<PostDto>>(posts);
     }
 
     public async Task<PostDto> GetPostByIdAsync(Guid postId)
     {
-        var post = await _context.Posts.FindAsync(postId);
+        var post = await _context.Posts
+            .Include(p => p.Comments)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .FirstOrDefaultAsync(p => p.Id == postId);
+
         if (post == null) throw new NotFoundException("Post not found");
 
         return _mapper.Map<PostDto>(post);
@@ -63,6 +76,10 @@ public class PostService : IPostService
             if (createPostDto.UserId == Guid.Empty)
                 throw new ArgumentException("UserId is required");
 
+            // Verify user exists before creating post
+            var user = await _context.Users.FindAsync(createPostDto.UserId);
+            if (user == null)
+                throw new NotFoundException($"User with ID {createPostDto.UserId} not found");
 
             // Ánh xạ từ CreatePostDto sang Post
             var post = _mapper.Map<CollabSphere.Entities.Domain.Post>(createPostDto)
@@ -75,6 +92,8 @@ public class PostService : IPostService
             post.DownvoteCount = 0;
             post.ShareCount = 0;
             post.CreatedBy = createPostDto.UserId;
+            post.UserId = createPostDto.UserId; // Ensure UserId is explicitly set to match CreatedBy
+
             // Xử lý PostImages nếu có
             if (createPostDto.PostImages != null && createPostDto.PostImages.Any())
             {
@@ -188,11 +207,13 @@ public class PostService : IPostService
             .Include(post => post.Votes)
             .Include(post => post.Shares)
             .Include(post => post.Reports)
+            .Include(post => post.PostImages)
             .Select(post => new PostDto
             {
                 Id = post.Id,
                 Title = post.Title,
                 Content = post.Content,
+                Category = post.Category,
                 CreatedBy = post.CreatedBy,
                 CreatedOn = post.CreatedOn,
                 UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),
@@ -201,7 +222,8 @@ public class PostService : IPostService
                 Comments = post.Comments,
                 Votes = post.Votes,
                 Shares = post.Shares,
-                Reports = post.Reports
+                Reports = post.Reports,
+                PostImages = post.PostImages
             })
             .ToListAsync();
 
@@ -222,6 +244,7 @@ public class PostService : IPostService
             Id = post.Id,
             Title = post.Title,
             Content = post.Content,
+            Category = post.Category,
             CreatedBy = post.CreatedBy,
             CreatedOn = post.CreatedOn,
             UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),
@@ -230,7 +253,8 @@ public class PostService : IPostService
             Comments = post.Comments,
             Votes = post.Votes,
             Shares = post.Shares,
-            Reports = post.Reports
+            Reports = post.Reports,
+            PostImages = post.PostImages
         }).ToList();
 
         var totalPages = (int) Math.Ceiling(total / (double) request.PageSize);
@@ -314,21 +338,23 @@ public class PostService : IPostService
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
+            .Include(p => p.PostImages)
             .Select(p => new PostDto
             {
                 Id = p.Id,
                 Title = p.Title,
                 Content = p.Content,
+                Category = p.Category,
                 CreatedBy = p.CreatedBy,
                 CreatedOn = p.CreatedOn,
                 UpvoteCount = p.UpvoteCount,
                 DownvoteCount = p.DownvoteCount,
                 ShareCount = p.ShareCount,
-
                 Comments = p.Comments,
                 Votes = p.Votes,
                 Shares = p.Shares,
-                Reports = p.Reports
+                Reports = p.Reports,
+                PostImages = p.PostImages
             })
             .AsNoTracking()
             .ToListAsync();
@@ -342,6 +368,7 @@ public class PostService : IPostService
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
+            .Include(p => p.PostImages)
             .AsNoTracking()
             .Select(p => new
             {
@@ -356,6 +383,7 @@ public class PostService : IPostService
                 Id = x.Post.Id,
                 Title = x.Post.Title,
                 Content = x.Post.Content,
+                Category = x.Post.Category,
                 CreatedBy = x.Post.CreatedBy,
                 CreatedOn = x.Post.CreatedOn,
                 UpvoteCount = x.Post.UpvoteCount,
@@ -364,7 +392,8 @@ public class PostService : IPostService
                 Comments = x.Post.Comments,
                 Votes = x.Post.Votes,
                 Shares = x.Post.Shares,
-                Reports = x.Post.Reports
+                Reports = x.Post.Reports,
+                PostImages = x.Post.PostImages
             })
             .ToListAsync();
     }
@@ -384,6 +413,7 @@ public class PostService : IPostService
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
+            .Include(p => p.PostImages)
             .OrderByDescending(p => p.CreatedOn)
             .Take(count)
             .Select(p => new PostDto
@@ -391,6 +421,7 @@ public class PostService : IPostService
                 Id = p.Id,
                 Title = p.Title,
                 Content = p.Content,
+                Category = p.Category,
                 CreatedBy = p.CreatedBy,
                 CreatedOn = p.CreatedOn,
                 UpvoteCount = p.UpvoteCount,
@@ -399,7 +430,8 @@ public class PostService : IPostService
                 Comments = p.Comments,
                 Votes = p.Votes,
                 Shares = p.Shares,
-                Reports = p.Reports
+                Reports = p.Reports,
+                PostImages = p.PostImages
             })
             .AsNoTracking()
             .ToListAsync();
