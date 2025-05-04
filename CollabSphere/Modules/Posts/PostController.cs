@@ -62,7 +62,7 @@ public class PostController : ControllerBase
 
 
     [HttpPut("{id}/update")]
-    public async Task<IActionResult> UpdatePost(Guid id, [FromBody] UpdatePostModel model)
+    public async Task<IActionResult> UpdatePostAsync(Guid id, [FromBody] UpdatePostDto model)
     {
         if (model == null)
         {
@@ -72,15 +72,33 @@ public class PostController : ControllerBase
             ));
         }
 
-        var updatedByUserId = User.GetUserId();
+        var updatedByUserId = User.GetUserId(); // Lấy userId từ JWT claims
 
-        var updatedPost = await _postService.UpdatePostAsync(id, model, updatedByUserId);
+        try
+        {
+            var updatedPost = await _postService.UpdatePostAsync(id, model, updatedByUserId);
 
-        return Ok(ApiResponse<PostResponseModel>.Success(
-            StatusCodes.Status200OK,
-            updatedPost,
-            $"Người dùng {updatedPost.UpdatedByUsername} đã cập nhật bài post thành công ngày {updatedPost.UpdatedOn:dd/MM/yyyy HH:mm:ss}"
-        ));
+            return Ok(ApiResponse<PostResponseModel>.Success(
+                StatusCodes.Status200OK,
+                updatedPost,
+                $"Người dùng {updatedPost.UpdatedByUsername} đã cập nhật bài post thành công ngày {updatedPost.UpdatedOn:dd/MM/yyyy HH:mm:ss}"
+            ));
+        }
+        catch (KeyNotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Failure(
+                StatusCodes.Status404NotFound,
+                new List<string> { ex.Message }
+            ));
+        }
+        catch (Exception ex)
+        {
+            // Có thể log lỗi nội bộ ở đây nếu cần
+            return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.Failure(
+                StatusCodes.Status500InternalServerError,
+                new List<string> { "Đã xảy ra lỗi trong quá trình cập nhật bài viết." }
+            ));
+        }
     }
     [HttpDelete("delete/{id}")]
     public async Task<IActionResult> DeletePost(Guid id)
@@ -197,6 +215,31 @@ public class PostController : ControllerBase
             StatusCodes.Status200OK,
             paginatedPosts,
             $"Lấy danh sách bài post của người dùng {userId} thành công"
+        ));
+    }
+    [HttpGet("home")]
+    public async Task<IActionResult> GetHomePosts(int pageNumber = 1, int pageSize = 10)
+    {
+        var posts = await _postService.GetHomePostsAsync(pageNumber, pageSize);
+        return Ok(posts);
+    }
+    [HttpGet("popular")]
+    public async Task<IActionResult> GetPopularPosts(int pageNumber = 1, int pageSize = 10)
+    {
+        var posts = await _postService.GetPopularPostsAsync(pageNumber, pageSize);
+        return Ok(posts);
+    }
+
+    [HttpGet("recent-followed")]
+    public async Task<IActionResult> GetRecentPostsFromFollowedUsers()
+    {
+        var userId = User.GetUserId();
+        var posts = await _postService.GetRecentPostsFromFollowedUsersAsync(userId);
+
+        return Ok(ApiResponse<List<PostDto>>.Success(
+            StatusCodes.Status200OK,
+            posts,
+            "Lấy danh sách bài post mới nhất từ người dùng đang theo dõi thành công"
         ));
     }
 }

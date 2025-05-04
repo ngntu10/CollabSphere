@@ -5,13 +5,15 @@ using FluentValidation;
 
 using Microsoft.AspNetCore.Identity;
 
+using UserEntity = CollabSphere.Entities.Domain.User;
+
 namespace CollabSphere.Modules.Auth.Validators;
 
 public class CreateUserModelValidator : AbstractValidator<CreateUserModel>
 {
-    private readonly UserManager<User> _userManager;
+    private readonly UserManager<UserEntity> _userManager;
 
-    public CreateUserModelValidator(UserManager<User> userManager)
+    public CreateUserModelValidator(UserManager<UserEntity> userManager)
     {
         _userManager = userManager;
 

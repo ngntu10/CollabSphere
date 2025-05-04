@@ -1,6 +1,8 @@
-using FluentValidation;
-using CollabSphere.Modules.User.Models;
 using System.Text.RegularExpressions;
+
+using CollabSphere.Modules.User.Models;
+
+using FluentValidation;
 
 namespace CollabSphere.Modules.User.Validators
 {
@@ -8,7 +10,7 @@ namespace CollabSphere.Modules.User.Validators
     {
         public CreateUserValidator()
         {
-            RuleFor(x => x.Name)
+            RuleFor(x => x.UserName)
                 .NotEmpty().WithMessage("Tên không được để trống")
                 .MaximumLength(30).WithMessage("Tên không được vượt quá 30 ký tự");
 
@@ -19,7 +21,7 @@ namespace CollabSphere.Modules.User.Validators
                 .NotEmpty().WithMessage("Email không được để trống")
                 .EmailAddress().WithMessage("Email không đúng định dạng");
 
-            RuleFor(x => x.Phone)
+            RuleFor(x => x.PhoneNumber)
                 .NotEmpty().WithMessage("Số điện thoại không được để trống")
                 .Length(10).WithMessage("Số điện thoại phải 10 ký tự")
                 .Matches(new Regex(@"^(\+\d{1,3})?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$"))
@@ -31,7 +33,7 @@ namespace CollabSphere.Modules.User.Validators
     {
         public UpdateUserValidator()
         {
-            RuleFor(x => x.Name)
+            RuleFor(x => x.UserName)
                 .NotEmpty().WithMessage("Tên không được để trống")
                 .MaximumLength(30).WithMessage("Tên không được vượt quá 30 ký tự");
 
@@ -42,11 +44,11 @@ namespace CollabSphere.Modules.User.Validators
                 .NotEmpty().WithMessage("Email không được để trống")
                 .EmailAddress().WithMessage("Email không đúng định dạng");
 
-            RuleFor(x => x.Phone)
+            RuleFor(x => x.PhoneNumber)
                 .NotEmpty().WithMessage("Số điện thoại không được để trống")
                 .Length(10).WithMessage("Số điện thoại phải 10 ký tự")
                 .Matches(new Regex(@"^(\+\d{1,3})?[-.\s]?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}$"))
                 .WithMessage("Số điện thoại không đúng định dạng");
         }
     }
-} 
+}

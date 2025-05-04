@@ -1,8 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+
+using AutoMapper;
+
+using CollabSphere.Common;
+using CollabSphere.Database;
+using CollabSphere.Exceptions;
 using CollabSphere.Modules.User.Models;
 using CollabSphere.Modules.User.Service;
+
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -16,23 +23,27 @@ public class UserController : ControllerBase
 {
     private readonly IUserService _UserService;
     private readonly DatabaseContext _context;
+    private readonly ILogger<UserController> _logger;
+    private readonly IMapper _mapper;
 
-    public UserController(IUserService UserService, DatabaseContext context)
+    public UserController(IUserService UserService, DatabaseContext context, ILogger<UserController> logger, IMapper mapper)
     {
         _UserService = UserService;
         _context = context;
+        _logger = logger;
+        _mapper = mapper;
     }
 
     [HttpGet("{userId}")]
-    public async Task<IActionResult> GetUserById(Guid userId)
+    public async Task<IActionResult> GetUserById(Guid Id)
     {
         try
         {
-            var user = await _UserService.GetUserByIdAsync(userId);
+            var user = await _UserService.GetUserByIdAsync(Id);
 
-            return Ok(ApiResponse<PostDto>.Success(
+            return Ok(ApiResponse<UserDto>.Success(
                 StatusCodes.Status200OK,
-                post,
+                user,
                 "Lấy thông tin người dùng thành công"
             ));
         }
@@ -80,17 +91,15 @@ public class UserController : ControllerBase
             ));
         }
 
-        var response = new CreateUserModel
-        {
-            Id = user.Id,
-            Name = user.Name,
-            Email = user.Email,
-            Phone = user.Phone,
-            Gender = user.Gender,
-            AvatarId = user.AvatarId,
-        };
+        user.UserName = createUserDto.UserName;
+        user.Email = createUserDto.Email;
+        user.PhoneNumber = createUserDto.PhoneNumber;
+        user.Gender = createUserDto.Gender;
+        user.AvatarId = createUserDto.AvatarId;
 
-        return Ok(ApiResponse<CreateUserModel>.Success(
+        var response = _mapper.Map<UserDto>(user);
+
+        return Ok(ApiResponse<UserDto>.Success(
             StatusCodes.Status200OK,
             response,
             "Tạo User thành công"
@@ -98,7 +107,7 @@ public class UserController : ControllerBase
     }
 
     [HttpPut("update/{userId}")]
-    public async Task<IActionResult> UpdateUser(Guid userId, [FromBody] UpdateUserModel model)
+    public async Task<IActionResult> UpdateUser(Guid Id, [FromBody] UpdateUserModel model)
     {
         if (model == null)
         {
@@ -107,33 +116,15 @@ public class UserController : ControllerBase
                 new List<string> { "Dữ liệu cập nhật không hợp lệ" }
             ));
         }
+        var updatedByUserId = User.GetUserId();
 
-        var updatedUser = await _UserService.UpdateUserAsync(userId, model);
+        var updateDto = _mapper.Map<UpdateUserDto>(model);
+        var updatedUser = await _UserService.UpdateUserAsync(Id, updateDto, updatedByUserId);
 
-        return Ok(ApiResponse<UpdateUserModel>.Success(
+        return Ok(ApiResponse<UserResponseModel>.Success(
             StatusCodes.Status200OK,
             updatedUser,
-            $"Cập nhật người dùng {updatedUser.UpdatedByUsername} thành công ngày {updatedUser.UpdatedOn:dd/MM/yyyy HH:mm:ss}"
-        ));
-    }
-
-    [HttpDelete("delete/{userId}")]
-    public async Task<IActionResult> DeleteUser(Guid userId)
-    {
-        var deletedUser = await _UserService.DeleteUserAsync(userId);
-
-        if (!deletedUser)
-        {
-            return NotFound(ApiResponse<object>.Failure(
-                StatusCodes.Status404NotFound,
-                new List<string> { "Người dùng không tồn tại hoặc bạn không có quyền xóa" }
-            ));
-        }
-
-        return Ok(ApiResponse<object>.Success(
-            StatusCodes.Status200OK,
-            null,
-            $"Đã xóa người dùng {deletedUser} thành công"
+            $"Cập nhật người dùng thành công ngày {updatedUser.UpdatedOn:dd/MM/yyyy HH:mm:ss}"
         ));
     }
 }

@@ -20,6 +20,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
+using UserEntity = CollabSphere.Entities.Domain.User;
+
 namespace CollabSphere.Modules.Auth.Services.Impl;
 
 public class AuthService : IAuthService
@@ -28,16 +30,16 @@ public class AuthService : IAuthService
     private readonly IEmailService _emailService;
     private readonly IEmailVerificationTokenService _emailVerificationTokenService;
     private readonly IMapper _mapper;
-    private readonly SignInManager<User> _signInManager;
+    private readonly SignInManager<UserEntity> _signInManager;
     private readonly ITemplateService _templateService;
-    private readonly UserManager<User> _userManager;
+    private readonly UserManager<UserEntity> _userManager;
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly ILogger<AuthService> _logger;
     private readonly IServiceScopeFactory _serviceScopeFactory;
 
     public AuthService(IMapper mapper,
-        UserManager<User> userManager,
-        SignInManager<User> signInManager,
+        UserManager<UserEntity> userManager,
+        SignInManager<UserEntity> signInManager,
         IConfiguration configuration,
         ITemplateService templateService,
         IEmailService emailService,
@@ -60,7 +62,7 @@ public class AuthService : IAuthService
 
     public async Task<LoginResponseModel> CreateAsync(CreateUserModel createUserModel)
     {
-        var user = _mapper.Map<User>(createUserModel);
+        var user = _mapper.Map<UserEntity>(createUserModel);
 
         var result = await _userManager.CreateAsync(user, createUserModel.Password);
 
@@ -160,7 +162,7 @@ public class AuthService : IAuthService
         using (var scope = _serviceScopeFactory.CreateScope())
         {
             var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<UserEntity>>();
 
             using var transaction = await dbContext.Database.BeginTransactionAsync();
             try
@@ -192,7 +194,7 @@ public class AuthService : IAuthService
         }
     }
 
-    public async Task<User> GetCurrentUserAsync()
+    public async Task<UserEntity> GetCurrentUserAsync()
     {
         try
         {
@@ -224,7 +226,7 @@ public class AuthService : IAuthService
         }
     }
 
-    public async Task<(User user, DateTime expiresAt)> GetCurrentUserWithExpirationAsync()
+    public async Task<(UserEntity user, DateTime expiresAt)> GetCurrentUserWithExpirationAsync()
     {
         try
         {

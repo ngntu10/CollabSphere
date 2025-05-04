@@ -1,8 +1,12 @@
-using AutoMapper;
-using CollabSphere.Entities.Domain;
-using CollabSphere.Modules.User.Models;
 using System.Linq;
 using System.Security.Claims;
+
+using AutoMapper;
+
+using CollabSphere.Entities.Domain;
+using CollabSphere.Modules.User.Models;
+
+using UserEntity = CollabSphere.Entities.Domain.User;
 
 namespace CollabSphere.Modules.User.Mapping
 {
@@ -11,12 +15,12 @@ namespace CollabSphere.Modules.User.Mapping
         public UserMappingProfile()
         {
             // Từ User entity sang UserDto
-            CreateMap<User, UserDto>()
-                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.Id))
+            CreateMap<UserEntity, UserDto>()
+                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
                 .ForMember(dest => dest.Phone, opt => opt.MapFrom(src => src.PhoneNumber))
-                .ForMember(dest => dest.AvatarId, opt => opt.MapFrom(src => src.AvatarUrl))
-                .ForMember(dest => dest.Name, opt => opt.MapFrom((src, dest, destMember, context) => 
+                .ForMember(dest => dest.AvatarId, opt => opt.MapFrom(src => src.AvatarId))
+                .ForMember(dest => dest.Name, opt => opt.MapFrom((src, dest, destMember, context) =>
                 {
                     if (context.Items.ContainsKey("Claims") && context.Items["Claims"] is Claim[] claims)
                     {
@@ -24,7 +28,7 @@ namespace CollabSphere.Modules.User.Mapping
                     }
                     return null;
                 }))
-                .ForMember(dest => dest.Gender, opt => opt.MapFrom((src, dest, destMember, context) => 
+                .ForMember(dest => dest.Gender, opt => opt.MapFrom((src, dest, destMember, context) =>
                 {
                     if (context.Items.ContainsKey("Claims") && context.Items["Claims"] is Claim[] claims)
                     {
@@ -34,20 +38,17 @@ namespace CollabSphere.Modules.User.Mapping
                 }));
 
             // Từ CreateUserDto sang User (cho việc tạo mới)
-            CreateMap<CreateUserDto, User>()
+            CreateMap<CreateUserDto, UserEntity>()
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
-                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.Phone))
-                .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.AvatarId))
-                .ForAllOtherMembers(opt => opt.Ignore());
+                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+                .ForMember(dest => dest.AvatarId, opt => opt.MapFrom(src => src.AvatarId));
 
-            // Từ UpdateUserDto sang User (cho việc cập nhật)
-            CreateMap<UpdateUserDto, User>()
+            CreateMap<UpdateUserDto, UserEntity>()
                 .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
                 .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.Email))
-                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.Phone))
-                .ForMember(dest => dest.AvatarUrl, opt => opt.MapFrom(src => src.AvatarId))
-                .ForAllOtherMembers(opt => opt.Ignore());
+                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+                .ForMember(dest => dest.AvatarId, opt => opt.MapFrom(src => src.AvatarId));
         }
     }
-} 
+}

@@ -585,7 +585,7 @@ namespace CollabSphere.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
-                    b.Property<string>("AvatarUrl")
+                    b.Property<string>("AvatarId")
                         .HasColumnType("longtext");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -605,6 +605,9 @@ namespace CollabSphere.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Gender")
+                        .HasColumnType("longtext");
 
                     b.Property<DateTime?>("LastLoginDate")
                         .HasColumnType("datetime(6)");
@@ -626,6 +629,10 @@ namespace CollabSphere.Migrations
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("longtext");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
 
                     b.Property<string>("PhoneNumber")
                         .HasColumnType("longtext");
@@ -664,6 +671,9 @@ namespace CollabSphere.Migrations
                     b.HasIndex("NormalizedUserName")
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
+
+                    b.HasIndex("Phone")
+                        .IsUnique();
 
                     b.HasIndex("UserName")
                         .IsUnique();
