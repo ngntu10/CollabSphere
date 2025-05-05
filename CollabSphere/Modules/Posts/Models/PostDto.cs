@@ -10,6 +10,7 @@ public class PostDto : BaseEntity
 
     public string Title { get; set; }
     public string Content { get; set; }
+    public string Category { get; set; }
 
 
     public Guid CreatedBy { get; set; }
@@ -27,5 +28,6 @@ public class PostDto : BaseEntity
 
     public virtual ICollection<Report> Reports { get; set; } = new List<Report>();
 
+    public virtual ICollection<PostImages> PostImages { get; set; } = new List<PostImages>();
 
 }
