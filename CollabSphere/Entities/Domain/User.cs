@@ -27,6 +27,10 @@ public class User : IdentityUser<Guid>, IAuditedEntity
 
     public virtual ICollection<Follow> Following { get; } = new List<Follow>();
 
+    // User blocks
+    public virtual ICollection<UserBlock> BlockedUsers { get; } = new List<UserBlock>();
+    public virtual ICollection<UserBlock> BlockedByUsers { get; } = new List<UserBlock>();
+
     public virtual ICollection<Message> SentMessages { get; } = new List<Message>();
 
     public virtual ICollection<Message> ReceivedMessages { get; } = new List<Message>();

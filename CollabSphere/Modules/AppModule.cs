@@ -2,6 +2,7 @@ using CollabSphere.Modules.Auth.Services;
 using CollabSphere.Modules.Auth.Services.Impl;
 using CollabSphere.Modules.Comment.Services;
 using CollabSphere.Modules.Email.Config;
+using CollabSphere.Modules.Follow;
 using CollabSphere.Modules.TodoItem.Services;
 using CollabSphere.Modules.TodoItem.Services.Impl;
 using CollabSphere.Modules.TodoList.Services;
@@ -16,6 +17,8 @@ public static class AppModule
         services.AddAuthServices(env);
 
         services.AddSampleServices(env);
+
+        services.AddFollowModule();
 
         services.RegisterAutoMapper();
 
