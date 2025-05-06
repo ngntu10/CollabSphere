@@ -60,6 +60,21 @@ public class PostController : ControllerBase
         ));
     }
 
+    [HttpGet("user/{userId}/{getBy}")]
+    public async Task<IActionResult> GetPostsByUpDownVote(Guid userId, string getBy)
+    {
+        if (getBy != "upvote" && getBy != "downvote")
+        {
+            return BadRequest(ApiResponse<object>.Failure(
+                StatusCodes.Status400BadRequest,
+                new List<string> { "Giá trị getBy không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'." }
+            ));
+        }
+        var posts = await _postService.GetPostsByUpDownVoteAsync(userId, getBy);
+        return Ok(ApiResponse<List<PostDto>>.Success(
+            StatusCodes.Status200OK, posts, "Lấy danh sách bài post thành công"
+        ));
+    }
 
     [HttpPut("{id}/update")]
     public async Task<IActionResult> UpdatePostAsync(Guid id, [FromBody] UpdatePostDto model)

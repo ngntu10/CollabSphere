@@ -58,6 +58,30 @@ public class PostService : IPostService
         return _mapper.Map<PostDto>(post);
     }
 
+    public async Task<List<PostDto>> GetPostsByUpDownVoteAsync(Guid userId, string getBy)
+    {
+        List<Entities.Domain.Post> posts;
+
+        if (getBy == "upvote")
+        {
+            posts = await _context.Posts
+                .Where(p => p.CreatedBy == userId && p.UpvoteCount >= p.DownvoteCount)
+                .ToListAsync();
+        }
+        else if (getBy == "downvote")
+        {
+            posts = await _context.Posts
+                .Where(p => p.CreatedBy == userId && p.DownvoteCount > p.UpvoteCount)
+                .ToListAsync();
+        }
+        else
+        {
+            throw new ArgumentException("Giá trị getBy không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'.");
+        }
+
+        return _mapper.Map<List<PostDto>>(posts);
+    }
+
     public async Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto)
     {
         if (createPostDto == null)
