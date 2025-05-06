@@ -22,6 +22,10 @@ namespace CollabSphere.Modules.Posts.Service
         Task<List<PostDto>> GetAllPostByUserId(Guid userId);
         Task<PaginationResponse<PostDto>> GetPaginatedPostsByUserId(Guid userId, PaginationRequest request);
         Task<bool> VotePostAsync(Guid postId, Guid userId, VoteType voteType);
+        Task<List<PostDto>> GetHomePostsAsync(int pageNumber, int pageSize);
+        Task<List<PostDto>> GetPopularPostsAsync(int pageNumber, int pageSize);
+        Task<List<PostDto>> GetPostsByUpDownVoteAsync(Guid userId, string getBy);
+        Task<List<PostDto>> GetRecentPostsFromFollowedUsersAsync(Guid userId, int count = 3);
     }
 }
 
