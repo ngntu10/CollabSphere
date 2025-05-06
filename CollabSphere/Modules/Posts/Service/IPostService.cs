@@ -17,7 +17,7 @@ namespace CollabSphere.Modules.Posts.Service
 
         Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto);
 
-        Task<PostResponseModel> UpdatePostAsync(Guid id, UpdatePostModel model, Guid updatedByUserId);
+        Task<PostResponseModel> UpdatePostAsync(Guid id, UpdatePostDto model, Guid updatedByUserId);
         Task<bool> DeletePostAsync(Guid id, Guid deletedByUserId);
         Task<List<PostDto>> GetAllPostByUserId(Guid userId);
         Task<PaginationResponse<PostDto>> GetPaginatedPostsByUserId(Guid userId, PaginationRequest request);

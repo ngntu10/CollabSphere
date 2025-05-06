@@ -1,5 +1,6 @@
 using CollabSphere.Modules.Auth.Services;
 using CollabSphere.Modules.Auth.Services.Impl;
+using CollabSphere.Modules.Comment.Services;
 using CollabSphere.Modules.Email.Config;
 using CollabSphere.Modules.TodoItem.Services;
 using CollabSphere.Modules.TodoItem.Services.Impl;
@@ -30,6 +31,7 @@ public static class AppModule
     {
         services.AddScoped<ITodoItemService, TodoItemService>();
         services.AddScoped<ITodoListService, TodoListService>();
+        services.AddScoped<ICommentService, CommentServices>();
     }
 
     private static void RegisterAutoMapper(this IServiceCollection services)

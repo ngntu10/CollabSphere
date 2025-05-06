@@ -8,6 +8,9 @@ using CollabSphere.Middleware;
 using CollabSphere.Modules;
 using CollabSphere.Modules.Auth.Services;
 using CollabSphere.Modules.Auth.Services.Impl;
+using CollabSphere.Modules.Chat.Hubs;
+using CollabSphere.Modules.Chat.Services.Impl;
+using CollabSphere.Modules.Chat.Services.Interfaces;
 using CollabSphere.Modules.Posts.Service;
 using CollabSphere.Modules.Posts.Service.Imp;
 using CollabSphere.Shared;
@@ -45,11 +48,21 @@ builder.Services.AddCors(options =>
     options.AddPolicy(name: MyAllowSpecificOrigins,
         builder =>
         {
-            builder.WithOrigins("http://localhost:3000") // ⚠️ Chỉ định frontend của bạn
-                .AllowCredentials() // ⚠️ Quan trọng để gửi cookie
+            builder.WithOrigins("http://localhost:3000")
+                .AllowCredentials()
                 .AllowAnyMethod()
                 .AllowAnyHeader();
         });
+});
+
+builder.Services.AddScoped<IMessageService, MessageService>();
+
+builder.Services.AddSignalR(options =>
+{
+    options.EnableDetailedErrors = true;
+    options.MaximumReceiveMessageSize = 102400;
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
 });
 
 
@@ -58,6 +71,8 @@ var app = builder.Build();
 using var scope = app.Services.CreateScope();
 
 await AutomatedMigration.MigrateAsync(scope.ServiceProvider);
+
+app.MapHub<ChatHub>("/chathub");
 
 app.UseSwagger();
 app.UseSwaggerUI(c => { c.SwaggerEndpoint("/swagger/v1/swagger.json", "CollabSphere V1"); });
