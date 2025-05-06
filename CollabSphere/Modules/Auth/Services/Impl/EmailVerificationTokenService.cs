@@ -9,6 +9,8 @@ using CollabSphere.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
+using UserEntity = CollabSphere.Entities.Domain.User;
+
 namespace CollabSphere.Modules.Auth.Services.Impl
 {
     public class EmailVerificationTokenService : IEmailVerificationTokenService
@@ -25,7 +27,7 @@ namespace CollabSphere.Modules.Auth.Services.Impl
             return Task.FromResult(token.ExpirationDate < DateTime.UtcNow);
         }
 
-        public async Task<EmailVerificationToken> CreateEmailTokenAsync(User user)
+        public async Task<EmailVerificationToken> CreateEmailTokenAsync(UserEntity user)
         {
             string newToken = Guid.NewGuid().ToString();
             DateTime expirationDate = DateTime.UtcNow.AddSeconds(300);
@@ -61,7 +63,7 @@ namespace CollabSphere.Modules.Auth.Services.Impl
             return emailVerificationToken;
         }
 
-        public async Task<User> GetUserByTokenAsync(string token)
+        public async Task<UserEntity> GetUserByTokenAsync(string token)
         {
             var emailVerificationToken = await _context.EmailVerificationTokens
                 .Include(t => t.User)

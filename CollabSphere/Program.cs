@@ -13,6 +13,7 @@ using CollabSphere.Modules.Chat.Services.Impl;
 using CollabSphere.Modules.Chat.Services.Interfaces;
 using CollabSphere.Modules.Posts.Service;
 using CollabSphere.Modules.Posts.Service.Imp;
+using CollabSphere.Modules.User.Service;
 using CollabSphere.Shared;
 
 using FluentValidation;
@@ -42,6 +43,8 @@ builder.Services.AddExceptionHandler<ExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.AddScoped<IPostService, PostService>();
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+
+builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddCors(options =>
 {

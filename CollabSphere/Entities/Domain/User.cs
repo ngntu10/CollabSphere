@@ -6,11 +6,13 @@ namespace CollabSphere.Entities.Domain;
 
 public class User : IdentityUser<Guid>, IAuditedEntity
 {
-    public string AvatarUrl { get; set; }
-
     public int Reputation { get; set; }
 
     public DateTime? LastLoginDate { get; set; }
+
+    public string Gender { get; set; }
+
+    public string AvatarId { get; set; }
 
     // Navigation properties
     public virtual ICollection<Post> Posts { get; } = new List<Post>();

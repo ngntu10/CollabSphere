@@ -2,6 +2,8 @@ using CollabSphere.Common;
 using CollabSphere.Entities.Domain;
 using CollabSphere.Modules.Auth.Models;
 
+using UserEntity = CollabSphere.Entities.Domain.User;
+
 namespace CollabSphere.Modules.Auth.Services;
 
 public interface IAuthService
@@ -14,7 +16,7 @@ public interface IAuthService
 
     Task VerifyEmailAsync(string token);
 
-    Task<User> GetCurrentUserAsync();
+    Task<UserEntity> GetCurrentUserAsync();
 
-    Task<(User user, DateTime expiresAt)> GetCurrentUserWithExpirationAsync();
+    Task<(UserEntity user, DateTime expiresAt)> GetCurrentUserWithExpirationAsync();
 }
