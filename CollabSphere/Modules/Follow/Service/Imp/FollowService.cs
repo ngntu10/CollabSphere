@@ -80,10 +80,10 @@ namespace CollabSphere.Modules.Follow.Service.Imp
                 Id = newFollow.Id,
                 FollowerId = follower.Id,
                 FollowerName = follower.UserName,
-                FollowerAvatarUrl = follower.AvatarUrl,
+                FollowerAvatarUrl = follower.AvatarId,
                 FollowingId = following.Id,
                 FollowingName = following.UserName,
-                FollowingAvatarUrl = following.AvatarUrl,
+                FollowingAvatarUrl = following.AvatarId,
                 FollowedAt = newFollow.FollowedAt
             };
         }
@@ -127,7 +127,7 @@ namespace CollabSphere.Modules.Follow.Service.Imp
                     Id = f.Follower.Id,
                     UserName = f.Follower.UserName,
                     Email = f.Follower.Email,
-                    AvatarUrl = f.Follower.AvatarUrl,
+                    AvatarUrl = f.Follower.AvatarId,
                     Reputation = f.Follower.Reputation,
                     IsFollowing = _context.Follows.Any(ff => ff.FollowerId == userId && ff.FollowingId == f.FollowerId)
                 })
@@ -179,7 +179,7 @@ namespace CollabSphere.Modules.Follow.Service.Imp
                     Id = f.Following.Id,
                     UserName = f.Following.UserName,
                     Email = f.Following.Email,
-                    AvatarUrl = f.Following.AvatarUrl,
+                    AvatarUrl = f.Following.AvatarId,
                     Reputation = f.Following.Reputation,
                     IsFollowing = true // Luôn là true vì đây là danh sách người đang theo dõi
                 })
@@ -228,7 +228,7 @@ namespace CollabSphere.Modules.Follow.Service.Imp
                     Id = u.Id,
                     UserName = u.UserName,
                     Email = u.Email,
-                    AvatarUrl = u.AvatarUrl,
+                    AvatarUrl = u.AvatarId,
                     Reputation = u.Reputation,
                     IsFollowing = _context.Follows.Any(f => f.FollowerId == currentUserId && f.FollowingId == u.Id),
                     IsBlocked = _context.UserBlocks.Any(b => b.BlockerId == currentUserId && b.BlockedId == u.Id)
@@ -335,7 +335,7 @@ namespace CollabSphere.Modules.Follow.Service.Imp
                     Id = b.Blocked.Id,
                     UserName = b.Blocked.UserName,
                     Email = b.Blocked.Email,
-                    AvatarUrl = b.Blocked.AvatarUrl,
+                    AvatarUrl = b.Blocked.AvatarId,
                     Reputation = b.Blocked.Reputation,
                     IsFollowing = false, // Không thể follow người bị chặn
                     IsBlocked = true
