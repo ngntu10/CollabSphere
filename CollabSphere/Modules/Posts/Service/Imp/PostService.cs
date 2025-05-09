@@ -38,6 +38,7 @@ public class PostService : IPostService
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
+            .Include(p => p.User)
             .ToListAsync();
 
         return _mapper.Map<List<PostDto>>(posts);
@@ -51,6 +52,7 @@ public class PostService : IPostService
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
+            .Include(p => p.User)
             .FirstOrDefaultAsync(p => p.Id == postId);
 
         if (post == null) throw new NotFoundException("Post not found");
@@ -232,6 +234,7 @@ public class PostService : IPostService
             .Include(post => post.Shares)
             .Include(post => post.Reports)
             .Include(post => post.PostImages)
+            .Include(post => post.User)
             .Select(post => new PostDto
             {
                 Id = post.Id,
@@ -247,7 +250,9 @@ public class PostService : IPostService
                 Votes = post.Votes,
                 Shares = post.Shares,
                 Reports = post.Reports,
-                PostImages = post.PostImages
+                PostImages = post.PostImages,
+                Username = post.User.UserName,
+                UserAvatar = post.User.AvatarId
             })
             .ToListAsync();
 
@@ -262,6 +267,12 @@ public class PostService : IPostService
 
         var posts = await _postRepository.GetAllAsync(spec);
         var total = await _postRepository.CountAsync(countSpec);
+
+        // Get user data for all posts
+        var userIds = posts.Select(p => p.CreatedBy).Distinct().ToList();
+        var users = await _context.Users
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => new { Username = u.UserName, Avatar = u.AvatarId });
 
         var postDtos = posts.Select(post => new PostDto
         {
@@ -278,7 +289,9 @@ public class PostService : IPostService
             Votes = post.Votes,
             Shares = post.Shares,
             Reports = post.Reports,
-            PostImages = post.PostImages
+            PostImages = post.PostImages,
+            Username = users.ContainsKey(post.CreatedBy) ? users[post.CreatedBy].Username : string.Empty,
+            UserAvatar = users.ContainsKey(post.CreatedBy) ? users[post.CreatedBy].Avatar : string.Empty
         }).ToList();
 
         var totalPages = (int) Math.Ceiling(total / (double) request.PageSize);
@@ -363,6 +376,7 @@ public class PostService : IPostService
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
+            .Include(p => p.User)
             .Select(p => new PostDto
             {
                 Id = p.Id,
@@ -378,7 +392,9 @@ public class PostService : IPostService
                 Votes = p.Votes,
                 Shares = p.Shares,
                 Reports = p.Reports,
-                PostImages = p.PostImages
+                PostImages = p.PostImages,
+                Username = p.User.UserName,
+                UserAvatar = p.User.AvatarId
             })
             .AsNoTracking()
             .ToListAsync();
@@ -393,6 +409,7 @@ public class PostService : IPostService
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
+            .Include(p => p.User)
             .AsNoTracking()
             .Select(p => new
             {
@@ -417,7 +434,9 @@ public class PostService : IPostService
                 Votes = x.Post.Votes,
                 Shares = x.Post.Shares,
                 Reports = x.Post.Reports,
-                PostImages = x.Post.PostImages
+                PostImages = x.Post.PostImages,
+                Username = x.Post.User.UserName,
+                UserAvatar = x.Post.User.AvatarId
             })
             .ToListAsync();
     }
@@ -438,6 +457,7 @@ public class PostService : IPostService
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
+            .Include(p => p.User)
             .OrderByDescending(p => p.CreatedOn)
             .Take(count)
             .Select(p => new PostDto
@@ -455,7 +475,9 @@ public class PostService : IPostService
                 Votes = p.Votes,
                 Shares = p.Shares,
                 Reports = p.Reports,
-                PostImages = p.PostImages
+                PostImages = p.PostImages,
+                Username = p.User.UserName,
+                UserAvatar = p.User.AvatarId
             })
             .AsNoTracking()
             .ToListAsync();

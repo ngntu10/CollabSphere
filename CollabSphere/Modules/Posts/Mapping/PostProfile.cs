@@ -17,7 +17,9 @@ namespace CollabSphere.Modules.Posts.Mapping
                 .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId));
 
 
-            CreateMap<CollabSphere.Entities.Domain.Post, PostDto>();
+            CreateMap<CollabSphere.Entities.Domain.Post, PostDto>()
+                .ForMember(dest => dest.Username, opt => opt.MapFrom(src => src.User.UserName))
+                .ForMember(dest => dest.UserAvatar, opt => opt.MapFrom(src => src.User.AvatarId));
         }
     }
 }
