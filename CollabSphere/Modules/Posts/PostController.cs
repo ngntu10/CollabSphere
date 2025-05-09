@@ -257,4 +257,24 @@ public class PostController : ControllerBase
             "Lấy danh sách bài post mới nhất từ người dùng đang theo dõi thành công"
         ));
     }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchPosts([FromQuery] string searchTerm, int pageNumber = 1, int pageSize = 10)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return BadRequest(ApiResponse<object>.Failure(
+                StatusCodes.Status400BadRequest,
+                new List<string> { "Từ khóa tìm kiếm không được để trống" }
+            ));
+        }
+
+        var posts = await _postService.SearchPostsAsync(searchTerm, pageNumber, pageSize);
+
+        return Ok(ApiResponse<List<PostDto>>.Success(
+            StatusCodes.Status200OK,
+            posts,
+            $"Tìm thấy {posts.Count} kết quả cho từ khóa '{searchTerm}'"
+        ));
+    }
 }

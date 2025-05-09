@@ -482,5 +482,59 @@ public class PostService : IPostService
             .AsNoTracking()
             .ToListAsync();
     }
+
+    public async Task<List<PostDto>> SearchPostsAsync(string searchTerm, int pageNumber = 1, int pageSize = 10)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return await GetHomePostsAsync(pageNumber, pageSize);
+        }
+
+        // Chuyển đổi searchTerm thành chữ thường để tìm kiếm không phân biệt chữ hoa/thường
+        var lowerSearchTerm = searchTerm.ToLower();
+
+        var posts = await _context.Posts
+            .Include(p => p.Comments)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
+            .Where(p =>
+                // Tìm kiếm trong tiêu đề và nội dung bài viết
+                p.Title.ToLower().Contains(lowerSearchTerm) ||
+                p.Content.ToLower().Contains(lowerSearchTerm) ||
+                // Tìm kiếm trong danh mục
+                p.Category.ToLower().Contains(lowerSearchTerm) ||
+                // Tìm kiếm theo tên người dùng
+                p.User.UserName.ToLower().Contains(lowerSearchTerm)
+            )
+            .OrderByDescending(p => p.CreatedOn) // Mới nhất trước
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new PostDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Content = p.Content,
+                Category = p.Category,
+                CreatedBy = p.CreatedBy,
+                CreatedOn = p.CreatedOn,
+                UpvoteCount = p.UpvoteCount,
+                DownvoteCount = p.DownvoteCount,
+                ShareCount = p.ShareCount,
+                Comments = p.Comments,
+                Votes = p.Votes,
+                Shares = p.Shares,
+                Reports = p.Reports,
+                PostImages = p.PostImages,
+                Username = p.User.UserName,
+                UserAvatar = p.User.AvatarId
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        return posts;
+    }
 }
 
