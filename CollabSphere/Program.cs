@@ -11,6 +11,8 @@ using CollabSphere.Modules.Auth.Services.Impl;
 using CollabSphere.Modules.Chat.Hubs;
 using CollabSphere.Modules.Chat.Services.Impl;
 using CollabSphere.Modules.Chat.Services.Interfaces;
+using CollabSphere.Modules.Notification.Mapping;
+using CollabSphere.Modules.Notification.Service;
 using CollabSphere.Modules.Posts.Service;
 using CollabSphere.Modules.Posts.Service.Imp;
 using CollabSphere.Modules.User.Service;
@@ -45,6 +47,7 @@ builder.Services.AddScoped<IPostService, PostService>();
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
 
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 builder.Services.AddCors(options =>
 {
@@ -68,6 +71,8 @@ builder.Services.AddSignalR(options =>
     options.KeepAliveInterval = TimeSpan.FromSeconds(15);
 });
 
+builder.Services.AddAutoMapper(typeof(Program).Assembly);
+builder.Services.AddAutoMapper(typeof(NotificationMappingProfile).Assembly);
 
 var app = builder.Build();
 
