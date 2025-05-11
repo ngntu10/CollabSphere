@@ -37,6 +37,13 @@ namespace CollabSphere.Modules.User.Mapping
                 .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
                 .ForMember(dest => dest.AvatarId, opt => opt.MapFrom(src => src.AvatarId))
                 .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender));
+
+            CreateMap<UpdateUserModel, UpdateUserDto>()
+                .ForMember(dest => dest.Email, opt => opt.MapFrom(src => src.Email))
+                .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.UserName))
+                .ForMember(dest => dest.PhoneNumber, opt => opt.MapFrom(src => src.PhoneNumber))
+                .ForMember(dest => dest.AvatarId, opt => opt.MapFrom(src => src.AvatarId))
+                .ForMember(dest => dest.Gender, opt => opt.MapFrom(src => src.Gender));
         }
     }
 }
