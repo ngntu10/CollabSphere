@@ -100,10 +100,10 @@ public class NotificationController : ControllerBase
             ));
         }
 
-        notification.UserId = Guid.Parse(createNotificationDto.UserId);
+        notification.UserId = createNotificationDto.UserId;
         notification.Content = createNotificationDto.Content;
         notification.Link = createNotificationDto.Link;
-        notification.IsRead = bool.Parse(createNotificationDto.IsRead);
+        notification.IsRead = createNotificationDto.IsRead;
         notification.NotificationType = createNotificationDto.NotificationType;
 
         var response = _mapper.Map<NotificationDto>(notification);
@@ -134,6 +134,28 @@ public class NotificationController : ControllerBase
             StatusCodes.Status200OK,
             updatedNotification,
             $"Cập nhật người dùng thành công ngày {updatedNotification.UpdatedOn:dd/MM/yyyy HH:mm:ss}"
+        ));
+    }
+
+    [HttpDelete("delete/{id}")]
+    public async Task<IActionResult> DeletePost(Guid id)
+    {
+        var deletedByUserId = User.GetUserId();
+
+        var isDeleted = await _NotificationService.DeleteNotificationAsync(id, deletedByUserId);
+
+        if (!isDeleted)
+        {
+            return NotFound(ApiResponse<object>.Failure(
+                StatusCodes.Status404NotFound,
+                new List<string> { "Bài post không tồn tại hoặc bạn không có quyền xóa" }
+            ));
+        }
+
+        return Ok(ApiResponse<object>.Success(
+            StatusCodes.Status200OK,
+            null,
+            $"Người dùng {deletedByUserId} đã xóa bài post thành công"
         ));
     }
 }

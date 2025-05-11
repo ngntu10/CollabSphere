@@ -23,6 +23,7 @@ namespace CollabSphere.Modules.Notification.Service
         Task<IEnumerable<NotificationDto>> GetAllNotificationsAsync();
         Task<Entities.Domain.Notification> CreateNotificationAsync(CreateNotificationDto createNotificationDto);
         Task<NotificationResponseModel> UpdateNotificationAsync(Guid id, UpdateNotificationDto updateDto, Guid updatedById);
+        Task<bool> DeleteNotificationAsync(Guid id, Guid deletedById);
     }
 
     public class NotificationService : INotificationService
@@ -82,10 +83,10 @@ namespace CollabSphere.Modules.Notification.Service
             if (user == null)
                 throw new NotFoundException("Người dùng không tồn tại");
 
-            notification.UserId = Guid.Parse(updateDto.UserId);
+            notification.UserId = updateDto.UserId;
             notification.Content = updateDto.Content;
             notification.Link = updateDto.Link;
-            notification.IsRead = bool.Parse(updateDto.IsRead);
+            notification.IsRead = updateDto.IsRead;
             notification.NotificationType = updateDto.NotificationType;
             notification.UpdatedOn = DateTime.UtcNow;
 
@@ -101,6 +102,19 @@ namespace CollabSphere.Modules.Notification.Service
                 IsRead = notification.IsRead,
                 NotificationType = notification.NotificationType,
             };
+        }
+
+        public async Task<bool> DeleteNotificationAsync(Guid id, Guid deletedById)
+        {
+            var notification = await _context.Notifications.FindAsync(id);
+
+            if (notification == null)
+                throw new NotFoundException("Thông báo không tồn tại");
+
+            _context.Notifications.Remove(notification);
+            await _context.SaveChangesAsync();
+
+            return true;
         }
     }
 }
