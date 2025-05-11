@@ -84,7 +84,7 @@ public class PostService : IPostService
         return _mapper.Map<List<PostDto>>(posts);
     }
 
-    public async Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto)
+    public async Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto, Guid userId)
     {
         if (createPostDto == null)
         {
@@ -99,13 +99,14 @@ public class PostService : IPostService
 
             if (string.IsNullOrEmpty(createPostDto.Category))
                 throw new ArgumentException("Category is required");
-            if (createPostDto.UserId == Guid.Empty)
+
+            if (userId == Guid.Empty)
                 throw new ArgumentException("UserId is required");
 
             // Verify user exists before creating post
-            var user = await _context.Users.FindAsync(createPostDto.UserId);
+            var user = await _context.Users.FindAsync(userId);
             if (user == null)
-                throw new NotFoundException($"User with ID {createPostDto.UserId} not found");
+                throw new NotFoundException($"User with ID {userId} not found");
 
             // Ánh xạ từ CreatePostDto sang Post
             var post = _mapper.Map<CollabSphere.Entities.Domain.Post>(createPostDto)
@@ -117,8 +118,8 @@ public class PostService : IPostService
             post.UpvoteCount = 0;
             post.DownvoteCount = 0;
             post.ShareCount = 0;
-            post.CreatedBy = createPostDto.UserId;
-            post.UserId = createPostDto.UserId; // Ensure UserId is explicitly set to match CreatedBy
+            post.CreatedBy = userId;
+            post.UserId = userId; // Ensure UserId is explicitly set to match CreatedBy
 
             // Xử lý PostImages nếu có
             if (createPostDto.PostImages != null && createPostDto.PostImages.Any())

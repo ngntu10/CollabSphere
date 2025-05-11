@@ -15,7 +15,7 @@ namespace CollabSphere.Modules.Posts.Service
 
         Task<PostDto> GetPostByIdAsync(Guid postId);
 
-        Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto);
+        Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto, Guid userId);
 
         Task<PostResponseModel> UpdatePostAsync(Guid id, UpdatePostDto model, Guid updatedByUserId);
         Task<bool> DeletePostAsync(Guid id, Guid deletedByUserId);

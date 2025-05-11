@@ -14,7 +14,7 @@ namespace CollabSphere.Modules.Posts.Mapping
                 .ForMember(dest => dest.PostImages, opt => opt.Ignore())  // Ignore PostImages during mapping
                 .ForMember(dest => dest.Category, opt =>
                     opt.MapFrom(src => string.IsNullOrEmpty(src.Category) ? "General" : src.Category))
-                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId));
+                .ForMember(dest => dest.UserId, opt => opt.Ignore());
 
 
             CreateMap<CollabSphere.Entities.Domain.Post, PostDto>()

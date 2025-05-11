@@ -36,10 +36,9 @@ public class PostController : ControllerBase
 
         // Lấy UserId của người dùng hiện tại từ token
         var userId = User.GetUserId();
-        createPostDto.UserId = userId;
 
         // Tạo bài post thông qua service
-        var post = await _postService.CreatePostAsync(createPostDto);
+        var post = await _postService.CreatePostAsync(createPostDto, userId);
         if (post == null)
         {
             return BadRequest(ApiResponse<object>.Failure(
