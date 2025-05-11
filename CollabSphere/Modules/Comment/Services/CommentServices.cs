@@ -7,6 +7,7 @@ using CollabSphere.Database;
 using CollabSphere.Entities.Domain;
 using CollabSphere.Exceptions;
 using CollabSphere.Modules.Comment.Models;
+using CollabSphere.Modules.Posts.Models;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -231,5 +232,165 @@ public class CommentServices : ICommentService
                 Replies = new List<CommentResponse>()
             }).OrderByDescending(r => r.CreatedOn).ToList()
         };
+    }
+
+    private async Task UpdateCommentScoreAsync(Guid commentId)
+    {
+        var comment = await _context.Comments.FindAsync(commentId);
+        if (comment == null)
+            return;
+
+        // Đếm số lượng upvote và downvote
+        int upvotes = await _context.Votes.CountAsync(v => v.CommentId == commentId && v.VoteType.ToLower() == "upvote");
+        int downvotes = await _context.Votes.CountAsync(v => v.CommentId == commentId && v.VoteType.ToLower() == "downvote");
+
+        // Tính toán điểm (upvotes - downvotes)
+        comment.Score = upvotes - downvotes;
+
+        _context.Comments.Update(comment);
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task<bool> VoteCommentAsync(Guid commentId, Guid userId, VoteType voteType)
+    {
+        var comment = await _context.Comments.FindAsync(commentId);
+        if (comment == null)
+            throw new NotFoundException("Bình luận không tồn tại");
+
+        var existingVote = await _context.Votes
+            .FirstOrDefaultAsync(v => v.CommentId == commentId && v.UserId == userId);
+
+        if (existingVote != null)
+        {
+            // Nếu vote type giống với vote cũ -> xóa vote (hủy vote)
+            if (existingVote.VoteType.ToLower() == voteType.ToString().ToLower())
+            {
+                _context.Votes.Remove(existingVote);
+                await _context.SaveChangesAsync();
+                await UpdateCommentScoreAsync(commentId);
+                return false;
+            }
+
+            // Nếu vote type khác với vote cũ -> cập nhật vote
+            existingVote.VoteType = voteType.ToString();
+            existingVote.UpdatedOn = DateTime.UtcNow;
+            existingVote.UpdatedBy = userId;
+            _context.Votes.Update(existingVote);
+        }
+        else
+        {
+            // Nếu chưa từng vote -> tạo vote mới
+            var vote = new Vote
+            {
+                Id = Guid.NewGuid(),
+                CommentId = commentId,
+                UserId = userId,
+                VoteType = voteType.ToString(),
+                CreatedBy = userId,
+                CreatedOn = DateTime.UtcNow,
+                UpdatedBy = userId,
+                UpdatedOn = DateTime.UtcNow
+            };
+            _context.Votes.Add(vote);
+        }
+
+        await _context.SaveChangesAsync();
+        await UpdateCommentScoreAsync(commentId);
+
+        return true;
+    }
+
+    public async Task<List<CommentResponse>> GetCommentsByUserIdAsync(Guid userId)
+    {
+        // Kiểm tra user có tồn tại không
+        var userExists = await _context.Users.AnyAsync(u => u.Id == userId);
+        if (!userExists)
+        {
+            throw new NotFoundException("Người dùng không tồn tại");
+        }
+
+        // Lấy tất cả comment của user
+        var comments = await _context.Comments
+            .Include(c => c.ChildComments)
+            .Where(c => c.UserId == userId)
+            .OrderByDescending(c => c.CreatedOn)
+            .ToListAsync();
+
+        // Map to response model
+        var response = comments.Select(c => new CommentResponse
+        {
+            Id = c.Id,
+            Content = c.Content,
+            UserId = c.UserId,
+            PostId = c.PostId,
+            ParentCommentId = c.ParentCommentId,
+            Score = c.Score,
+            CreatedOn = c.CreatedOn,
+            Replies = c.ChildComments.Select(reply => new CommentResponse
+            {
+                Id = reply.Id,
+                Content = reply.Content,
+                UserId = reply.UserId,
+                PostId = reply.PostId,
+                ParentCommentId = reply.ParentCommentId,
+                Score = reply.Score,
+                CreatedOn = reply.CreatedOn,
+                Replies = new List<CommentResponse>()
+            }).OrderByDescending(r => r.CreatedOn).ToList()
+        }).ToList();
+
+        return response;
+    }
+
+    public async Task<List<CommentResponse>> GetUserVotedCommentsAsync(Guid userId, string voteType)
+    {
+        // Kiểm tra voteType hợp lệ
+        if (string.IsNullOrEmpty(voteType) || (voteType.ToLower() != "upvote" && voteType.ToLower() != "downvote"))
+            throw new ArgumentException("Giá trị voteType không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'.");
+
+        // Chuẩn hóa loại vote
+        var normalizedVoteType = voteType.ToLower() == "upvote" ? "upvote" : "downvote";
+        var capitalizedVoteType = char.ToUpper(normalizedVoteType[0]) + normalizedVoteType.Substring(1);
+
+        // Kiểm tra user có tồn tại không
+        var userExists = await _context.Users.AnyAsync(u => u.Id == userId);
+        if (!userExists)
+        {
+            throw new NotFoundException("Người dùng không tồn tại");
+        }
+
+        // Lấy danh sách các comment mà người dùng đã vote theo loại vote
+        var comments = await _context.Comments
+            .Include(c => c.ChildComments)
+            .Where(c => c.Votes.Any(v => v.UserId == userId &&
+                                    (v.VoteType.ToLower() == normalizedVoteType ||
+                                     v.VoteType == capitalizedVoteType)))
+            .OrderByDescending(c => c.CreatedOn)
+            .ToListAsync();
+
+        // Map to response model
+        var response = comments.Select(c => new CommentResponse
+        {
+            Id = c.Id,
+            Content = c.Content,
+            UserId = c.UserId,
+            PostId = c.PostId,
+            ParentCommentId = c.ParentCommentId,
+            Score = c.Score,
+            CreatedOn = c.CreatedOn,
+            Replies = c.ChildComments.Select(reply => new CommentResponse
+            {
+                Id = reply.Id,
+                Content = reply.Content,
+                UserId = reply.UserId,
+                PostId = reply.PostId,
+                ParentCommentId = reply.ParentCommentId,
+                Score = reply.Score,
+                CreatedOn = reply.CreatedOn,
+                Replies = new List<CommentResponse>()
+            }).OrderByDescending(r => r.CreatedOn).ToList()
+        }).ToList();
+
+        return response;
     }
 }

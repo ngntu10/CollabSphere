@@ -537,5 +537,53 @@ public class PostService : IPostService
 
         return posts;
     }
+
+    public async Task<List<PostDto>> GetUserVotedPostsAsync(Guid userId, string voteType)
+    {
+        if (string.IsNullOrEmpty(voteType) || (voteType.ToLower() != "upvote" && voteType.ToLower() != "downvote"))
+            throw new ArgumentException("Giá trị voteType không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'.");
+
+        var normalizedVoteType = voteType.ToLower() == "upvote" ? "upvote" : "downvote";
+        var capitalizedVoteType = char.ToUpper(normalizedVoteType[0]) + normalizedVoteType.Substring(1);
+
+        Console.WriteLine($"Tìm bài viết với userId={userId} và voteType={normalizedVoteType} hoặc {capitalizedVoteType}");
+
+        // Lấy danh sách các bài post mà người dùng đã vote theo loại vote
+        var posts = await _context.Posts
+            .Include(p => p.Comments)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
+            .Where(p => p.Votes.Any(v => v.UserId == userId &&
+                                     (v.VoteType.ToLower() == normalizedVoteType ||
+                                      v.VoteType == capitalizedVoteType)))
+            .OrderByDescending(p => p.CreatedOn)
+            .Select(p => new PostDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Content = p.Content,
+                Category = p.Category,
+                CreatedBy = p.CreatedBy,
+                CreatedOn = p.CreatedOn,
+                UpvoteCount = p.UpvoteCount,
+                DownvoteCount = p.DownvoteCount,
+                ShareCount = p.ShareCount,
+                Comments = p.Comments,
+                Votes = p.Votes,
+                Shares = p.Shares,
+                Reports = p.Reports,
+                PostImages = p.PostImages,
+                Username = p.User.UserName,
+                UserAvatar = p.User.AvatarId
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        Console.WriteLine($"Đã tìm thấy {posts.Count} bài viết");
+        return posts;
+    }
 }
 

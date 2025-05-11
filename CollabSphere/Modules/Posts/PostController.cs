@@ -281,4 +281,33 @@ public class PostController : ControllerBase
             $"Tìm thấy {posts.Count} kết quả cho từ khóa '{searchTerm}'"
         ));
     }
+
+    [HttpGet("user/{userId}/voted/{voteType}")]
+    public async Task<IActionResult> GetUserVotedPosts(Guid userId, string voteType)
+    {
+        if (voteType != "upvote" && voteType != "downvote")
+        {
+            return BadRequest(ApiResponse<object>.Failure(
+                StatusCodes.Status400BadRequest,
+                new List<string> { "Giá trị voteType không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'." }
+            ));
+        }
+
+        try
+        {
+            var posts = await _postService.GetUserVotedPostsAsync(userId, voteType);
+            return Ok(ApiResponse<List<PostDto>>.Success(
+                StatusCodes.Status200OK,
+                posts,
+                $"Lấy danh sách bài post đã {voteType} của người dùng {userId} thành công"
+            ));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.Failure(
+                StatusCodes.Status500InternalServerError,
+                new List<string> { ex.Message }
+            ));
+        }
+    }
 }
