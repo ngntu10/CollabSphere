@@ -34,6 +34,10 @@ public class PostController : ControllerBase
             ));
         }
 
+        // Lấy UserId của người dùng hiện tại từ token
+        var userId = User.GetUserId();
+        createPostDto.UserId = userId;
+
         // Tạo bài post thông qua service
         var post = await _postService.CreatePostAsync(createPostDto);
         if (post == null)
@@ -50,6 +54,7 @@ public class PostController : ControllerBase
             Id = post.Id,
             Title = post.Title,
             Content = post.Content,
+            UserId = userId,
             PostImages = post.PostImages?.Select(x => x.ImageID ?? "").ToList() // Xử lý null cho ImageID
         };
 
