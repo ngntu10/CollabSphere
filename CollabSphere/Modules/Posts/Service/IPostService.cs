@@ -15,7 +15,7 @@ namespace CollabSphere.Modules.Posts.Service
 
         Task<PostDto> GetPostByIdAsync(Guid postId);
 
-        Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto);
+        Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto, Guid userId);
 
         Task<PostResponseModel> UpdatePostAsync(Guid id, UpdatePostDto model, Guid updatedByUserId);
         Task<bool> DeletePostAsync(Guid id, Guid deletedByUserId);
@@ -26,6 +26,8 @@ namespace CollabSphere.Modules.Posts.Service
         Task<List<PostDto>> GetPopularPostsAsync(int pageNumber, int pageSize);
         Task<List<PostDto>> GetPostsByUpDownVoteAsync(Guid userId, string getBy);
         Task<List<PostDto>> GetRecentPostsFromFollowedUsersAsync(Guid userId, int count = 3);
+        Task<List<PostDto>> SearchPostsAsync(string searchTerm, int pageNumber = 1, int pageSize = 10);
+        Task<List<PostDto>> GetUserVotedPostsAsync(Guid userId, string voteType);
     }
 }
 

@@ -30,4 +30,8 @@ public class PostDto : BaseEntity
 
     public virtual ICollection<PostImages> PostImages { get; set; } = new List<PostImages>();
 
+    // Thêm thông tin người dùng đăng bài
+    public string Username { get; set; }
+    public string UserAvatar { get; set; }
+
 }

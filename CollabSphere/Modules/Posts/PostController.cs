@@ -34,8 +34,11 @@ public class PostController : ControllerBase
             ));
         }
 
+        // Lấy UserId của người dùng hiện tại từ token
+        var userId = User.GetUserId();
+
         // Tạo bài post thông qua service
-        var post = await _postService.CreatePostAsync(createPostDto);
+        var post = await _postService.CreatePostAsync(createPostDto, userId);
         if (post == null)
         {
             return BadRequest(ApiResponse<object>.Failure(
@@ -50,6 +53,7 @@ public class PostController : ControllerBase
             Id = post.Id,
             Title = post.Title,
             Content = post.Content,
+            UserId = userId,
             PostImages = post.PostImages?.Select(x => x.ImageID ?? "").ToList() // Xử lý null cho ImageID
         };
 
@@ -256,5 +260,54 @@ public class PostController : ControllerBase
             posts,
             "Lấy danh sách bài post mới nhất từ người dùng đang theo dõi thành công"
         ));
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchPosts([FromQuery] string searchTerm, int pageNumber = 1, int pageSize = 10)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return BadRequest(ApiResponse<object>.Failure(
+                StatusCodes.Status400BadRequest,
+                new List<string> { "Từ khóa tìm kiếm không được để trống" }
+            ));
+        }
+
+        var posts = await _postService.SearchPostsAsync(searchTerm, pageNumber, pageSize);
+
+        return Ok(ApiResponse<List<PostDto>>.Success(
+            StatusCodes.Status200OK,
+            posts,
+            $"Tìm thấy {posts.Count} kết quả cho từ khóa '{searchTerm}'"
+        ));
+    }
+
+    [HttpGet("user/{userId}/voted/{voteType}")]
+    public async Task<IActionResult> GetUserVotedPosts(Guid userId, string voteType)
+    {
+        if (voteType != "upvote" && voteType != "downvote")
+        {
+            return BadRequest(ApiResponse<object>.Failure(
+                StatusCodes.Status400BadRequest,
+                new List<string> { "Giá trị voteType không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'." }
+            ));
+        }
+
+        try
+        {
+            var posts = await _postService.GetUserVotedPostsAsync(userId, voteType);
+            return Ok(ApiResponse<List<PostDto>>.Success(
+                StatusCodes.Status200OK,
+                posts,
+                $"Lấy danh sách bài post đã {voteType} của người dùng {userId} thành công"
+            ));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.Failure(
+                StatusCodes.Status500InternalServerError,
+                new List<string> { ex.Message }
+            ));
+        }
     }
 }

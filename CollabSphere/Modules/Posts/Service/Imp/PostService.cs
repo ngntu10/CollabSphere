@@ -38,6 +38,7 @@ public class PostService : IPostService
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
+            .Include(p => p.User)
             .ToListAsync();
 
         return _mapper.Map<List<PostDto>>(posts);
@@ -51,6 +52,7 @@ public class PostService : IPostService
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
+            .Include(p => p.User)
             .FirstOrDefaultAsync(p => p.Id == postId);
 
         if (post == null) throw new NotFoundException("Post not found");
@@ -82,7 +84,7 @@ public class PostService : IPostService
         return _mapper.Map<List<PostDto>>(posts);
     }
 
-    public async Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto)
+    public async Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto, Guid userId)
     {
         if (createPostDto == null)
         {
@@ -97,13 +99,14 @@ public class PostService : IPostService
 
             if (string.IsNullOrEmpty(createPostDto.Category))
                 throw new ArgumentException("Category is required");
-            if (createPostDto.UserId == Guid.Empty)
+
+            if (userId == Guid.Empty)
                 throw new ArgumentException("UserId is required");
 
             // Verify user exists before creating post
-            var user = await _context.Users.FindAsync(createPostDto.UserId);
+            var user = await _context.Users.FindAsync(userId);
             if (user == null)
-                throw new NotFoundException($"User with ID {createPostDto.UserId} not found");
+                throw new NotFoundException($"User with ID {userId} not found");
 
             // Ánh xạ từ CreatePostDto sang Post
             var post = _mapper.Map<CollabSphere.Entities.Domain.Post>(createPostDto)
@@ -115,8 +118,8 @@ public class PostService : IPostService
             post.UpvoteCount = 0;
             post.DownvoteCount = 0;
             post.ShareCount = 0;
-            post.CreatedBy = createPostDto.UserId;
-            post.UserId = createPostDto.UserId; // Ensure UserId is explicitly set to match CreatedBy
+            post.CreatedBy = userId;
+            post.UserId = userId; // Ensure UserId is explicitly set to match CreatedBy
 
             // Xử lý PostImages nếu có
             if (createPostDto.PostImages != null && createPostDto.PostImages.Any())
@@ -232,6 +235,7 @@ public class PostService : IPostService
             .Include(post => post.Shares)
             .Include(post => post.Reports)
             .Include(post => post.PostImages)
+            .Include(post => post.User)
             .Select(post => new PostDto
             {
                 Id = post.Id,
@@ -247,7 +251,9 @@ public class PostService : IPostService
                 Votes = post.Votes,
                 Shares = post.Shares,
                 Reports = post.Reports,
-                PostImages = post.PostImages
+                PostImages = post.PostImages,
+                Username = post.User.UserName,
+                UserAvatar = post.User.AvatarId
             })
             .ToListAsync();
 
@@ -262,6 +268,12 @@ public class PostService : IPostService
 
         var posts = await _postRepository.GetAllAsync(spec);
         var total = await _postRepository.CountAsync(countSpec);
+
+        // Get user data for all posts
+        var userIds = posts.Select(p => p.CreatedBy).Distinct().ToList();
+        var users = await _context.Users
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => new { Username = u.UserName, Avatar = u.AvatarId });
 
         var postDtos = posts.Select(post => new PostDto
         {
@@ -278,7 +290,9 @@ public class PostService : IPostService
             Votes = post.Votes,
             Shares = post.Shares,
             Reports = post.Reports,
-            PostImages = post.PostImages
+            PostImages = post.PostImages,
+            Username = users.ContainsKey(post.CreatedBy) ? users[post.CreatedBy].Username : string.Empty,
+            UserAvatar = users.ContainsKey(post.CreatedBy) ? users[post.CreatedBy].Avatar : string.Empty
         }).ToList();
 
         var totalPages = (int) Math.Ceiling(total / (double) request.PageSize);
@@ -363,6 +377,7 @@ public class PostService : IPostService
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
+            .Include(p => p.User)
             .Select(p => new PostDto
             {
                 Id = p.Id,
@@ -378,7 +393,9 @@ public class PostService : IPostService
                 Votes = p.Votes,
                 Shares = p.Shares,
                 Reports = p.Reports,
-                PostImages = p.PostImages
+                PostImages = p.PostImages,
+                Username = p.User.UserName,
+                UserAvatar = p.User.AvatarId
             })
             .AsNoTracking()
             .ToListAsync();
@@ -393,6 +410,7 @@ public class PostService : IPostService
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
+            .Include(p => p.User)
             .AsNoTracking()
             .Select(p => new
             {
@@ -417,7 +435,9 @@ public class PostService : IPostService
                 Votes = x.Post.Votes,
                 Shares = x.Post.Shares,
                 Reports = x.Post.Reports,
-                PostImages = x.Post.PostImages
+                PostImages = x.Post.PostImages,
+                Username = x.Post.User.UserName,
+                UserAvatar = x.Post.User.AvatarId
             })
             .ToListAsync();
     }
@@ -438,6 +458,7 @@ public class PostService : IPostService
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
+            .Include(p => p.User)
             .OrderByDescending(p => p.CreatedOn)
             .Take(count)
             .Select(p => new PostDto
@@ -455,10 +476,114 @@ public class PostService : IPostService
                 Votes = p.Votes,
                 Shares = p.Shares,
                 Reports = p.Reports,
-                PostImages = p.PostImages
+                PostImages = p.PostImages,
+                Username = p.User.UserName,
+                UserAvatar = p.User.AvatarId
             })
             .AsNoTracking()
             .ToListAsync();
+    }
+
+    public async Task<List<PostDto>> SearchPostsAsync(string searchTerm, int pageNumber = 1, int pageSize = 10)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return await GetHomePostsAsync(pageNumber, pageSize);
+        }
+
+        // Chuyển đổi searchTerm thành chữ thường để tìm kiếm không phân biệt chữ hoa/thường
+        var lowerSearchTerm = searchTerm.ToLower();
+
+        var posts = await _context.Posts
+            .Include(p => p.Comments)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
+            .Where(p =>
+                // Tìm kiếm trong tiêu đề và nội dung bài viết
+                p.Title.ToLower().Contains(lowerSearchTerm) ||
+                p.Content.ToLower().Contains(lowerSearchTerm) ||
+                // Tìm kiếm trong danh mục
+                p.Category.ToLower().Contains(lowerSearchTerm) ||
+                // Tìm kiếm theo tên người dùng
+                p.User.UserName.ToLower().Contains(lowerSearchTerm)
+            )
+            .OrderByDescending(p => p.CreatedOn) // Mới nhất trước
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(p => new PostDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Content = p.Content,
+                Category = p.Category,
+                CreatedBy = p.CreatedBy,
+                CreatedOn = p.CreatedOn,
+                UpvoteCount = p.UpvoteCount,
+                DownvoteCount = p.DownvoteCount,
+                ShareCount = p.ShareCount,
+                Comments = p.Comments,
+                Votes = p.Votes,
+                Shares = p.Shares,
+                Reports = p.Reports,
+                PostImages = p.PostImages,
+                Username = p.User.UserName,
+                UserAvatar = p.User.AvatarId
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        return posts;
+    }
+
+    public async Task<List<PostDto>> GetUserVotedPostsAsync(Guid userId, string voteType)
+    {
+        if (string.IsNullOrEmpty(voteType) || (voteType.ToLower() != "upvote" && voteType.ToLower() != "downvote"))
+            throw new ArgumentException("Giá trị voteType không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'.");
+
+        var normalizedVoteType = voteType.ToLower() == "upvote" ? "upvote" : "downvote";
+        var capitalizedVoteType = char.ToUpper(normalizedVoteType[0]) + normalizedVoteType.Substring(1);
+
+        Console.WriteLine($"Tìm bài viết với userId={userId} và voteType={normalizedVoteType} hoặc {capitalizedVoteType}");
+
+        // Lấy danh sách các bài post mà người dùng đã vote theo loại vote
+        var posts = await _context.Posts
+            .Include(p => p.Comments)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
+            .Where(p => p.Votes.Any(v => v.UserId == userId &&
+                                     (v.VoteType.ToLower() == normalizedVoteType ||
+                                      v.VoteType == capitalizedVoteType)))
+            .OrderByDescending(p => p.CreatedOn)
+            .Select(p => new PostDto
+            {
+                Id = p.Id,
+                Title = p.Title,
+                Content = p.Content,
+                Category = p.Category,
+                CreatedBy = p.CreatedBy,
+                CreatedOn = p.CreatedOn,
+                UpvoteCount = p.UpvoteCount,
+                DownvoteCount = p.DownvoteCount,
+                ShareCount = p.ShareCount,
+                Comments = p.Comments,
+                Votes = p.Votes,
+                Shares = p.Shares,
+                Reports = p.Reports,
+                PostImages = p.PostImages,
+                Username = p.User.UserName,
+                UserAvatar = p.User.AvatarId
+            })
+            .AsNoTracking()
+            .ToListAsync();
+
+        Console.WriteLine($"Đã tìm thấy {posts.Count} bài viết");
+        return posts;
     }
 }
 
