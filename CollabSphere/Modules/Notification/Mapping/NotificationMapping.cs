@@ -37,6 +37,12 @@ namespace CollabSphere.Modules.Notification.Mapping
                 .ForMember(dest => dest.Link, opt => opt.MapFrom(src => src.Link))
                 .ForMember(dest => dest.IsRead, opt => opt.MapFrom(src => src.IsRead))
                 .ForMember(dest => dest.NotificationType, opt => opt.MapFrom((src => src.NotificationType)));
+            CreateMap<UpdateNotificationModel, UpdateNotificationDto>()
+                .ForMember(dest => dest.UserId, opt => opt.MapFrom(src => src.UserId))
+                .ForMember(dest => dest.Content, opt => opt.MapFrom(src => src.Content))
+                .ForMember(dest => dest.Link, opt => opt.MapFrom(src => src.Link))
+                .ForMember(dest => dest.IsRead, opt => opt.MapFrom(src => src.IsRead))
+                .ForMember(dest => dest.NotificationType, opt => opt.MapFrom((src => src.NotificationType)));
         }
     }
 }
