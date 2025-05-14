@@ -22,7 +22,7 @@ namespace CollabSphere.Modules.User.Service
         Task<UserDto> GetUserByIdAsync(Guid Id);
         Task<IEnumerable<UserDto>> GetAllUsersAsync();
         // Task<Entities.Domain.User> CreateUserAsync(CreateUserDto createUserDto);
-        Task<UserResponseModel> UpdateUserAsync(Guid id, UpdateUserDto updateDto, Guid updatedById);
+        Task<UserResponseModel> UpdateUserAsync(Guid id, UpdateUserDto updateDto, Guid updatedByUserId);
     }
 
     public class UserService : IUserService
@@ -75,7 +75,7 @@ namespace CollabSphere.Modules.User.Service
         //     return user;
         // }
 
-        public async Task<UserResponseModel> UpdateUserAsync(Guid id, UpdateUserDto updateDto, Guid updatedById)
+        public async Task<UserResponseModel> UpdateUserAsync(Guid id, UpdateUserDto updateDto, Guid updatedByUserId)
         {
             var user = await _context.Users.FindAsync(id);
 
