@@ -91,7 +91,7 @@ public class PostController : ControllerBase
             ));
         }
 
-        var updatedByUserId = User.GetUserId(); // Lấy userId từ JWT claims
+        var updatedByUserId = User.GetUserId();
 
         try
         {

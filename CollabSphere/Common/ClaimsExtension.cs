@@ -7,6 +7,10 @@ namespace CollabSphere.Common
     {
         public static Guid GetUserId(this ClaimsPrincipal user)
         {
+            foreach (var claim in user.Claims)
+            {
+                Console.WriteLine($"Claim Type: {claim.Type}, Value: {claim.Value}");
+            }
             var userIdClaim = user.FindFirst(ClaimTypes.NameIdentifier);
 
             if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
