@@ -237,9 +237,9 @@ public class PostController : ControllerBase
         ));
     }
     [HttpGet("home")]
-    public async Task<IActionResult> GetHomePosts(int pageNumber = 1, int pageSize = 10)
+    public async Task<IActionResult> GetHomePosts()
     {
-        var posts = await _postService.GetHomePostsAsync(pageNumber, pageSize);
+        var posts = await _postService.GetHomePostsAsync();
         return Ok(posts);
     }
     [HttpGet("popular")]
@@ -252,6 +252,11 @@ public class PostController : ControllerBase
     [HttpGet("recent-followed")]
     public async Task<IActionResult> GetRecentPostsFromFollowedUsers()
     {
+        Console.WriteLine("=== Debug Recent Followed API ===");
+        Console.WriteLine($"Authorization header: {Request.Headers["Authorization"]}");
+        Console.WriteLine($"User authenticated: {User.Identity?.IsAuthenticated}");
+        Console.WriteLine($"User name: {User.Identity?.Name}");
+
         var userId = User.GetUserId();
         var posts = await _postService.GetRecentPostsFromFollowedUsersAsync(userId);
 

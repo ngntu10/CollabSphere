@@ -7,22 +7,20 @@ namespace CollabSphere.Modules.Posts.Models;
 
 public class PostDto : BaseEntity
 {
+    public virtual string Title { get; set; }
+    public virtual string Content { get; set; }
+    public virtual string Category { get; set; }
 
-    public string Title { get; set; }
-    public string Content { get; set; }
-    public string Category { get; set; }
+    public virtual Guid CreatedBy { get; set; }
+    public virtual DateTime CreatedOn { get; set; }
+    public virtual int UpvoteCount { get; set; }
 
+    public virtual int DownvoteCount { get; set; }
 
-    public Guid CreatedBy { get; set; }
-    public DateTime CreatedOn { get; set; }
-    public int UpvoteCount { get; set; }
+    public virtual int ShareCount { get; set; }
+    public virtual ICollection<CommentDto> Comments { get; set; } = new List<CommentDto>();
 
-    public int DownvoteCount { get; set; }
-
-    public int ShareCount { get; set; }
-    public virtual ICollection<CollabSphere.Entities.Domain.Comment> Comments { get; set; } = new List<CollabSphere.Entities.Domain.Comment>();
-
-    public virtual ICollection<Vote> Votes { get; set; } = new List<Vote>();
+    public virtual ICollection<VoteDto> Votes { get; set; } = new List<VoteDto>();
 
     public virtual ICollection<Share> Shares { get; set; } = new List<Share>();
 
@@ -31,7 +29,6 @@ public class PostDto : BaseEntity
     public virtual ICollection<PostImages> PostImages { get; set; } = new List<PostImages>();
 
     // Thêm thông tin người dùng đăng bài
-    public string Username { get; set; }
-    public string UserAvatar { get; set; }
-
+    public virtual string Username { get; set; }
+    public virtual string UserAvatar { get; set; }
 }
