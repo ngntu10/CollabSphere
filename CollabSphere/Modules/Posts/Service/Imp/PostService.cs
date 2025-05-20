@@ -15,6 +15,8 @@ using CollabSphere.Modules.Posts.Specifications;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
+using CommentEntity = CollabSphere.Entities.Domain.Comment;
+
 namespace CollabSphere.Modules.Posts.Service.Imp;
 
 public class PostService : IPostService
@@ -30,10 +32,67 @@ public class PostService : IPostService
         _postRepository = postRepository;
     }
 
+    private ICollection<CommentDto> MapComments(ICollection<CommentEntity> comments)
+    {
+        return comments.Select(c => new CommentDto
+        {
+            Id = c.Id,
+            Content = c.Content,
+            CreatedBy = c.CreatedBy,
+            CreatedOn = c.CreatedOn,
+            PostId = c.PostId,
+            User = c.User == null ? null : new CommentUserDto
+            {
+                Id = c.User.Id,
+                UserName = c.User.UserName,
+                AvatarId = c.User.AvatarId
+            }
+        }).ToList();
+    }
+
+    private ICollection<VoteDto> MapVotes(ICollection<Vote> votes)
+    {
+        return votes.Select(v => new VoteDto
+        {
+            Id = v.Id,
+            PostId = v.PostId ?? Guid.Empty,
+            UserId = v.UserId,
+            VoteType = v.VoteType,
+            CreatedOn = v.CreatedOn,
+            CreatedBy = v.CreatedBy,
+            UpdatedOn = v.UpdatedOn,
+            UpdatedBy = v.UpdatedBy
+        }).ToList();
+    }
+
+    private PostDto MapPost(Entities.Domain.Post post)
+    {
+        return new PostDto
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Content = post.Content,
+            Category = post.Category,
+            CreatedBy = post.CreatedBy,
+            CreatedOn = post.CreatedOn,
+            UpvoteCount = post.UpvoteCount,
+            DownvoteCount = post.DownvoteCount,
+            ShareCount = post.ShareCount,
+            Comments = MapComments(post.Comments),
+            Votes = MapVotes(post.Votes),
+            Shares = post.Shares,
+            Reports = post.Reports,
+            PostImages = post.PostImages,
+            Username = post.User.UserName,
+            UserAvatar = post.User.AvatarId
+        };
+    }
+
     public async Task<List<PostDto>> GetAllPostsAsync()
     {
         var posts = await _context.Posts
             .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
@@ -41,13 +100,14 @@ public class PostService : IPostService
             .Include(p => p.User)
             .ToListAsync();
 
-        return _mapper.Map<List<PostDto>>(posts);
+        return posts.Select(MapPost).ToList();
     }
 
     public async Task<PostDto> GetPostByIdAsync(Guid postId)
     {
         var post = await _context.Posts
             .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
@@ -57,7 +117,23 @@ public class PostService : IPostService
 
         if (post == null) throw new NotFoundException("Post not found");
 
-        return _mapper.Map<PostDto>(post);
+        return MapPost(post);
+    }
+
+    public async Task<List<PostDto>> GetAllPostByUserId(Guid getPostByUserId)
+    {
+        var posts = await _context.Posts
+            .Where(post => post.CreatedBy == getPostByUserId)
+            .Include(post => post.Comments)
+                .ThenInclude(c => c.User)
+            .Include(post => post.Votes)
+            .Include(post => post.Shares)
+            .Include(post => post.Reports)
+            .Include(post => post.PostImages)
+            .Include(post => post.User)
+            .ToListAsync();
+
+        return posts.Select(MapPost).ToList();
     }
 
     public async Task<List<PostDto>> GetPostsByUpDownVoteAsync(Guid userId, string getBy)
@@ -68,12 +144,26 @@ public class PostService : IPostService
         {
             posts = await _context.Posts
                 .Where(p => p.CreatedBy == userId && p.UpvoteCount >= p.DownvoteCount)
+                .Include(p => p.Comments)
+                    .ThenInclude(c => c.User)
+                .Include(p => p.Votes)
+                .Include(p => p.Shares)
+                .Include(p => p.Reports)
+                .Include(p => p.PostImages)
+                .Include(p => p.User)
                 .ToListAsync();
         }
         else if (getBy == "downvote")
         {
             posts = await _context.Posts
                 .Where(p => p.CreatedBy == userId && p.DownvoteCount > p.UpvoteCount)
+                .Include(p => p.Comments)
+                    .ThenInclude(c => c.User)
+                .Include(p => p.Votes)
+                .Include(p => p.Shares)
+                .Include(p => p.Reports)
+                .Include(p => p.PostImages)
+                .Include(p => p.User)
                 .ToListAsync();
         }
         else
@@ -81,7 +171,7 @@ public class PostService : IPostService
             throw new ArgumentException("Giá trị getBy không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'.");
         }
 
-        return _mapper.Map<List<PostDto>>(posts);
+        return posts.Select(MapPost).ToList();
     }
 
     public async Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto, Guid userId)
@@ -209,55 +299,54 @@ public class PostService : IPostService
         };
     }
 
-
-
-
     public async Task<bool> DeletePostAsync(Guid id, Guid deletedByUserId)
     {
-        var post = await _context.Posts.FindAsync(id);
-        if (post == null)
-            return false;
+        try
+        {
+            var post = await _context.Posts
+                .Include(p => p.Comments)
+                .Include(p => p.Votes)
+                .Include(p => p.Shares)
+                .Include(p => p.Reports)
+                .Include(p => p.PostImages)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
+            if (post == null)
+                return false;
 
-        if (post.CreatedBy != deletedByUserId)
-            return false;
-
-        _context.Posts.Remove(post);
-        await _context.SaveChangesAsync();
-        return true;
-    }
-    public async Task<List<PostDto>> GetAllPostByUserId(Guid getPostByUserId)
-    {
-        var posts = await _context.Posts
-            .Where(post => post.CreatedBy == getPostByUserId)
-            .Include(post => post.Comments)
-            .Include(post => post.Votes)
-            .Include(post => post.Shares)
-            .Include(post => post.Reports)
-            .Include(post => post.PostImages)
-            .Include(post => post.User)
-            .Select(post => new PostDto
+            // Kiểm tra quyền xóa
+            if (post.CreatedBy != deletedByUserId)
             {
-                Id = post.Id,
-                Title = post.Title,
-                Content = post.Content,
-                Category = post.Category,
-                CreatedBy = post.CreatedBy,
-                CreatedOn = post.CreatedOn,
-                UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),
-                DownvoteCount = post.Votes.Count(v => v.VoteType == "downvote"),
-                ShareCount = post.Shares.Count,
-                Comments = post.Comments,
-                Votes = post.Votes,
-                Shares = post.Shares,
-                Reports = post.Reports,
-                PostImages = post.PostImages,
-                Username = post.User.UserName,
-                UserAvatar = post.User.AvatarId
-            })
-            .ToListAsync();
+                // Kiểm tra xem người dùng có phải là admin không
+                var userRoles = await _context.UserRoles
+                    .Where(ur => ur.UserId == deletedByUserId)
+                    .Select(ur => ur.RoleId)
+                    .ToListAsync();
 
-        return posts;
+                var adminRole = await _context.Roles
+                    .FirstOrDefaultAsync(r => r.Name == "Admin");
+
+                if (adminRole == null || !userRoles.Contains(adminRole.Id))
+                    return false;
+            }
+
+            // Xóa các dữ liệu liên quan
+            _context.Comments.RemoveRange(post.Comments);
+            _context.Votes.RemoveRange(post.Votes);
+            _context.Shares.RemoveRange(post.Shares);
+            _context.Reports.RemoveRange(post.Reports);
+            _context.PostImages.RemoveRange(post.PostImages);
+
+            // Xóa post
+            _context.Posts.Remove(post);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting post: {ex.Message}");
+            return false;
+        }
     }
 
     public async Task<PaginationResponse<PostDto>> GetPaginatedPostsByUserId(Guid userId, PaginationRequest request)
@@ -286,8 +375,8 @@ public class PostService : IPostService
             UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),
             DownvoteCount = post.Votes.Count(v => v.VoteType == "downvote"),
             ShareCount = post.Shares.Count,
-            Comments = post.Comments,
-            Votes = post.Votes,
+            Comments = MapComments(post.Comments),
+            Votes = MapVotes(post.Votes),
             Shares = post.Shares,
             Reports = post.Reports,
             PostImages = post.PostImages,
@@ -317,6 +406,7 @@ public class PostService : IPostService
         _context.Posts.Update(post);
         await _context.SaveChangesAsync();
     }
+
     public async Task<bool> VotePostAsync(Guid postId, Guid userId, VoteType voteType)
     {
         var post = await _context.Posts.FindAsync(postId);
@@ -363,49 +453,30 @@ public class PostService : IPostService
         await _context.SaveChangesAsync();
         await UpdatePostVoteCount(postId);
 
-
         return true;
     }
-    public async Task<List<PostDto>> GetHomePostsAsync(int pageNumber, int pageSize)
+
+    public async Task<List<PostDto>> GetHomePostsAsync()
     {
-        return await _context.Posts
+        var posts = await _context.Posts
             .OrderByDescending(p => p.CreatedOn)
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
             .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
             .Include(p => p.User)
-            .Select(p => new PostDto
-            {
-                Id = p.Id,
-                Title = p.Title,
-                Content = p.Content,
-                Category = p.Category,
-                CreatedBy = p.CreatedBy,
-                CreatedOn = p.CreatedOn,
-                UpvoteCount = p.UpvoteCount,
-                DownvoteCount = p.DownvoteCount,
-                ShareCount = p.ShareCount,
-                Comments = p.Comments,
-                Votes = p.Votes,
-                Shares = p.Shares,
-                Reports = p.Reports,
-                PostImages = p.PostImages,
-                Username = p.User.UserName,
-                UserAvatar = p.User.AvatarId
-            })
-            .AsNoTracking()
             .ToListAsync();
-    }
 
+        return posts.Select(MapPost).ToList();
+    }
 
     public async Task<List<PostDto>> GetPopularPostsAsync(int pageNumber, int pageSize)
     {
-        return await _context.Posts
+        var posts = await _context.Posts
             .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
@@ -415,45 +486,28 @@ public class PostService : IPostService
             .Select(p => new
             {
                 Post = p,
-                PopularityScore = p.UpvoteCount + p.Comments.Count // có thể cân chỉnh lại tùy chiến lược
+                PopularityScore = p.UpvoteCount + p.Comments.Count
             })
             .OrderByDescending(x => x.PopularityScore)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new PostDto
-            {
-                Id = x.Post.Id,
-                Title = x.Post.Title,
-                Content = x.Post.Content,
-                Category = x.Post.Category,
-                CreatedBy = x.Post.CreatedBy,
-                CreatedOn = x.Post.CreatedOn,
-                UpvoteCount = x.Post.UpvoteCount,
-                DownvoteCount = x.Post.DownvoteCount,
-                ShareCount = x.Post.ShareCount,
-                Comments = x.Post.Comments,
-                Votes = x.Post.Votes,
-                Shares = x.Post.Shares,
-                Reports = x.Post.Reports,
-                PostImages = x.Post.PostImages,
-                Username = x.Post.User.UserName,
-                UserAvatar = x.Post.User.AvatarId
-            })
+            .Select(x => x.Post)
             .ToListAsync();
+
+        return posts.Select(MapPost).ToList();
     }
 
     public async Task<List<PostDto>> GetRecentPostsFromFollowedUsersAsync(Guid userId, int count = 3)
     {
-        // Get the list of users that the current user is following
         var followedUserIds = await _context.Follows
             .Where(uf => uf.FollowerId == userId)
             .Select(uf => uf.FollowingId)
             .ToListAsync();
 
-        // Get the most recent posts from those users
-        return await _context.Posts
+        var posts = await _context.Posts
             .Where(p => followedUserIds.Contains(p.CreatedBy))
             .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
@@ -461,81 +515,40 @@ public class PostService : IPostService
             .Include(p => p.User)
             .OrderByDescending(p => p.CreatedOn)
             .Take(count)
-            .Select(p => new PostDto
-            {
-                Id = p.Id,
-                Title = p.Title,
-                Content = p.Content,
-                Category = p.Category,
-                CreatedBy = p.CreatedBy,
-                CreatedOn = p.CreatedOn,
-                UpvoteCount = p.UpvoteCount,
-                DownvoteCount = p.DownvoteCount,
-                ShareCount = p.ShareCount,
-                Comments = p.Comments,
-                Votes = p.Votes,
-                Shares = p.Shares,
-                Reports = p.Reports,
-                PostImages = p.PostImages,
-                Username = p.User.UserName,
-                UserAvatar = p.User.AvatarId
-            })
-            .AsNoTracking()
             .ToListAsync();
+
+        return posts.Select(MapPost).ToList();
     }
 
     public async Task<List<PostDto>> SearchPostsAsync(string searchTerm, int pageNumber = 1, int pageSize = 10)
     {
         if (string.IsNullOrWhiteSpace(searchTerm))
         {
-            return await GetHomePostsAsync(pageNumber, pageSize);
+            return await GetHomePostsAsync();
         }
 
-        // Chuyển đổi searchTerm thành chữ thường để tìm kiếm không phân biệt chữ hoa/thường
         var lowerSearchTerm = searchTerm.ToLower();
 
         var posts = await _context.Posts
             .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
             .Include(p => p.User)
             .Where(p =>
-                // Tìm kiếm trong tiêu đề và nội dung bài viết
                 p.Title.ToLower().Contains(lowerSearchTerm) ||
                 p.Content.ToLower().Contains(lowerSearchTerm) ||
-                // Tìm kiếm trong danh mục
                 p.Category.ToLower().Contains(lowerSearchTerm) ||
-                // Tìm kiếm theo tên người dùng
                 p.User.UserName.ToLower().Contains(lowerSearchTerm)
             )
-            .OrderByDescending(p => p.CreatedOn) // Mới nhất trước
+            .OrderByDescending(p => p.CreatedOn)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(p => new PostDto
-            {
-                Id = p.Id,
-                Title = p.Title,
-                Content = p.Content,
-                Category = p.Category,
-                CreatedBy = p.CreatedBy,
-                CreatedOn = p.CreatedOn,
-                UpvoteCount = p.UpvoteCount,
-                DownvoteCount = p.DownvoteCount,
-                ShareCount = p.ShareCount,
-                Comments = p.Comments,
-                Votes = p.Votes,
-                Shares = p.Shares,
-                Reports = p.Reports,
-                PostImages = p.PostImages,
-                Username = p.User.UserName,
-                UserAvatar = p.User.AvatarId
-            })
-            .AsNoTracking()
             .ToListAsync();
 
-        return posts;
+        return posts.Select(MapPost).ToList();
     }
 
     public async Task<List<PostDto>> GetUserVotedPostsAsync(Guid userId, string voteType)
@@ -548,9 +561,9 @@ public class PostService : IPostService
 
         Console.WriteLine($"Tìm bài viết với userId={userId} và voteType={normalizedVoteType} hoặc {capitalizedVoteType}");
 
-        // Lấy danh sách các bài post mà người dùng đã vote theo loại vote
         var posts = await _context.Posts
             .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
@@ -560,30 +573,10 @@ public class PostService : IPostService
                                      (v.VoteType.ToLower() == normalizedVoteType ||
                                       v.VoteType == capitalizedVoteType)))
             .OrderByDescending(p => p.CreatedOn)
-            .Select(p => new PostDto
-            {
-                Id = p.Id,
-                Title = p.Title,
-                Content = p.Content,
-                Category = p.Category,
-                CreatedBy = p.CreatedBy,
-                CreatedOn = p.CreatedOn,
-                UpvoteCount = p.UpvoteCount,
-                DownvoteCount = p.DownvoteCount,
-                ShareCount = p.ShareCount,
-                Comments = p.Comments,
-                Votes = p.Votes,
-                Shares = p.Shares,
-                Reports = p.Reports,
-                PostImages = p.PostImages,
-                Username = p.User.UserName,
-                UserAvatar = p.User.AvatarId
-            })
-            .AsNoTracking()
             .ToListAsync();
 
         Console.WriteLine($"Đã tìm thấy {posts.Count} bài viết");
-        return posts;
+        return posts.Select(MapPost).ToList();
     }
 }
 
