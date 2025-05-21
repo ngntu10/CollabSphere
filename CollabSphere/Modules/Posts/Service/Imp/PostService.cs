@@ -41,6 +41,7 @@ public class PostService : IPostService
             CreatedBy = c.CreatedBy,
             CreatedOn = c.CreatedOn,
             PostId = c.PostId,
+            ParentCommentId = c.ParentCommentId,
             User = c.User == null ? null : new CommentUserDto
             {
                 Id = c.User.Id,
@@ -472,9 +473,9 @@ public class PostService : IPostService
         return posts.Select(MapPost).ToList();
     }
 
-    public async Task<List<PostDto>> GetPopularPostsAsync(int pageNumber, int pageSize)
+    public async Task<PaginationResponse<PostDto>> GetPopularPostsAsync(int pageNumber = 1, int pageSize = 10)
     {
-        var posts = await _context.Posts
+        var query = _context.Posts
             .Include(p => p.Comments)
                 .ThenInclude(c => c.User)
             .Include(p => p.Votes)
@@ -489,22 +490,33 @@ public class PostService : IPostService
                 PopularityScore = p.UpvoteCount + p.Comments.Count
             })
             .OrderByDescending(x => x.PopularityScore)
+            .Select(x => x.Post);
+
+        var total = await query.CountAsync();
+        var posts = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => x.Post)
             .ToListAsync();
 
-        return posts.Select(MapPost).ToList();
+        var totalPages = (int) Math.Ceiling(total / (double) pageSize);
+
+        return new PaginationResponse<PostDto>(
+            pageNumber,
+            totalPages,
+            pageSize,
+            total,
+            posts.Select(MapPost).ToList()
+        );
     }
 
-    public async Task<List<PostDto>> GetRecentPostsFromFollowedUsersAsync(Guid userId, int count = 3)
+    public async Task<PaginationResponse<PostDto>> GetRecentPostsFromFollowedUsersAsync(Guid userId, int pageNumber = 1, int pageSize = 10)
     {
         var followedUserIds = await _context.Follows
             .Where(uf => uf.FollowerId == userId)
             .Select(uf => uf.FollowingId)
             .ToListAsync();
 
-        var posts = await _context.Posts
+        var query = _context.Posts
             .Where(p => followedUserIds.Contains(p.CreatedBy))
             .Include(p => p.Comments)
                 .ThenInclude(c => c.User)
@@ -513,11 +525,23 @@ public class PostService : IPostService
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
             .Include(p => p.User)
-            .OrderByDescending(p => p.CreatedOn)
-            .Take(count)
+            .OrderByDescending(p => p.CreatedOn);
+
+        var total = await query.CountAsync();
+        var posts = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
-        return posts.Select(MapPost).ToList();
+        var totalPages = (int) Math.Ceiling(total / (double) pageSize);
+
+        return new PaginationResponse<PostDto>(
+            pageNumber,
+            totalPages,
+            pageSize,
+            total,
+            posts.Select(MapPost).ToList()
+        );
     }
 
     public async Task<List<PostDto>> SearchPostsAsync(string searchTerm, int pageNumber = 1, int pageSize = 10)

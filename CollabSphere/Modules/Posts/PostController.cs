@@ -237,32 +237,49 @@ public class PostController : ControllerBase
         ));
     }
     [HttpGet("home")]
-    public async Task<IActionResult> GetHomePosts()
+    public async Task<IActionResult> GetHomePosts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var posts = await _postService.GetHomePostsAsync();
-        return Ok(posts);
+        var total = posts.Count;
+        var pagedPosts = posts
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+        var totalPages = (int) Math.Ceiling(total / (double) pageSize);
+
+        var response = new PaginationResponse<PostDto>(
+            pageNumber,
+            totalPages,
+            pageSize,
+            total,
+            pagedPosts
+        );
+
+        return Ok(ApiResponse<PaginationResponse<PostDto>>.Success(
+            StatusCodes.Status200OK,
+            response,
+            "Lấy danh sách bài post thành công"
+        ));
     }
     [HttpGet("popular")]
-    public async Task<IActionResult> GetPopularPosts(int pageNumber = 1, int pageSize = 10)
+    public async Task<IActionResult> GetPopularPosts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var posts = await _postService.GetPopularPostsAsync(pageNumber, pageSize);
-        return Ok(posts);
+        var response = await _postService.GetPopularPostsAsync(pageNumber, pageSize);
+        return Ok(ApiResponse<PaginationResponse<PostDto>>.Success(
+            StatusCodes.Status200OK,
+            response,
+            "Lấy danh sách bài post phổ biến thành công"
+        ));
     }
 
     [HttpGet("recent-followed")]
-    public async Task<IActionResult> GetRecentPostsFromFollowedUsers()
+    public async Task<IActionResult> GetRecentPostsFromFollowedUsers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        Console.WriteLine("=== Debug Recent Followed API ===");
-        Console.WriteLine($"Authorization header: {Request.Headers["Authorization"]}");
-        Console.WriteLine($"User authenticated: {User.Identity?.IsAuthenticated}");
-        Console.WriteLine($"User name: {User.Identity?.Name}");
-
         var userId = User.GetUserId();
-        var posts = await _postService.GetRecentPostsFromFollowedUsersAsync(userId);
-
-        return Ok(ApiResponse<List<PostDto>>.Success(
+        var response = await _postService.GetRecentPostsFromFollowedUsersAsync(userId, pageNumber, pageSize);
+        return Ok(ApiResponse<PaginationResponse<PostDto>>.Success(
             StatusCodes.Status200OK,
-            posts,
+            response,
             "Lấy danh sách bài post mới nhất từ người dùng đang theo dõi thành công"
         ));
     }
