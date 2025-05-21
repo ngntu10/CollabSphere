@@ -226,13 +226,27 @@ public class PostController : ControllerBase
     [HttpGet("user/{userId}/paginated")]
     public async Task<IActionResult> GetPaginatedPostsByUserId(
         Guid userId,
-        [FromQuery] PaginationRequest request)
+        [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var paginatedPosts = await _postService.GetPaginatedPostsByUserId(userId, request);
+        var posts = await _postService.GetAllPostByUserId(userId);
+        var total = posts.Count;
+        var pagedPosts = posts
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+        var totalPages = (int) Math.Ceiling(total / (double) pageSize);
+
+        var response = new PaginationResponse<PostDto>(
+            pageNumber,
+            totalPages,
+            pageSize,
+            total,
+            pagedPosts
+        );
 
         return Ok(ApiResponse<PaginationResponse<PostDto>>.Success(
             StatusCodes.Status200OK,
-            paginatedPosts,
+            response,
             $"Lấy danh sách bài post của người dùng {userId} thành công"
         ));
     }
