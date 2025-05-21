@@ -41,6 +41,7 @@ public class PostService : IPostService
             CreatedBy = c.CreatedBy,
             CreatedOn = c.CreatedOn,
             PostId = c.PostId,
+            ParentCommentId = c.ParentCommentId,
             User = c.User == null ? null : new CommentUserDto
             {
                 Id = c.User.Id,

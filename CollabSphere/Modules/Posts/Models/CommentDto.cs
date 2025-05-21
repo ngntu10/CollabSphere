@@ -16,5 +16,6 @@ public class CommentDto
     public virtual Guid CreatedBy { get; set; }
     public virtual DateTime CreatedOn { get; set; }
     public virtual Guid PostId { get; set; }
+    public virtual Guid? ParentCommentId { get; set; }
     public virtual CommentUserDto User { get; set; }
 }
