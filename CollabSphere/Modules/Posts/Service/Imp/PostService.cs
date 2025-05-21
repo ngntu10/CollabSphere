@@ -83,9 +83,9 @@ public class PostService : IPostService
             Votes = MapVotes(post.Votes),
             Shares = post.Shares,
             Reports = post.Reports,
-            PostImages = post.PostImages,
-            Username = post.User.UserName,
-            UserAvatar = post.User.AvatarId
+            PostImages = post.PostImages ?? new List<PostImages>(),
+            Username = post.User != null ? post.User.UserName : string.Empty,
+            UserAvatar = post.User != null ? post.User.AvatarId : string.Empty
         };
     }
 
@@ -125,13 +125,13 @@ public class PostService : IPostService
     {
         var posts = await _context.Posts
             .Where(post => post.CreatedBy == getPostByUserId)
-            .Include(post => post.Comments)
-                .ThenInclude(c => c.User)
+            .Include(post => post.Comments).ThenInclude(c => c.User)
             .Include(post => post.Votes)
             .Include(post => post.Shares)
             .Include(post => post.Reports)
             .Include(post => post.PostImages)
             .Include(post => post.User)
+            .AsNoTracking()
             .ToListAsync();
 
         return posts.Select(MapPost).ToList();
@@ -359,31 +359,7 @@ public class PostService : IPostService
         var posts = await _postRepository.GetAllAsync(spec);
         var total = await _postRepository.CountAsync(countSpec);
 
-        // Get user data for all posts
-        var userIds = posts.Select(p => p.CreatedBy).Distinct().ToList();
-        var users = await _context.Users
-            .Where(u => userIds.Contains(u.Id))
-            .ToDictionaryAsync(u => u.Id, u => new { Username = u.UserName, Avatar = u.AvatarId });
-
-        var postDtos = posts.Select(post => new PostDto
-        {
-            Id = post.Id,
-            Title = post.Title,
-            Content = post.Content,
-            Category = post.Category,
-            CreatedBy = post.CreatedBy,
-            CreatedOn = post.CreatedOn,
-            UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),
-            DownvoteCount = post.Votes.Count(v => v.VoteType == "downvote"),
-            ShareCount = post.Shares.Count,
-            Comments = MapComments(post.Comments),
-            Votes = MapVotes(post.Votes),
-            Shares = post.Shares,
-            Reports = post.Reports,
-            PostImages = post.PostImages,
-            Username = users.ContainsKey(post.CreatedBy) ? users[post.CreatedBy].Username : string.Empty,
-            UserAvatar = users.ContainsKey(post.CreatedBy) ? users[post.CreatedBy].Avatar : string.Empty
-        }).ToList();
+        var postDtos = posts.Select(MapPost).ToList();
 
         var totalPages = (int) Math.Ceiling(total / (double) request.PageSize);
 
