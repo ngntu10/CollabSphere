@@ -75,9 +75,8 @@ builder.Services.AddAutoMapper(typeof(NotificationMappingProfile).Assembly);
 
 var app = builder.Build();
 
-using var scope = app.Services.CreateScope();
-
-await AutomatedMigration.MigrateAsync(scope.ServiceProvider);
+// using var scope = app.Services.CreateScope();
+// await AutomatedMigration.MigrateAsync(scope.ServiceProvider);
 
 app.MapHub<ChatHub>("/chathub");
 
