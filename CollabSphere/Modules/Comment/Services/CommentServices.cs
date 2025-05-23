@@ -22,6 +22,61 @@ public class CommentServices : ICommentService
         _context = context;
     }
 
+    private async Task<CommentResponse> MapCommentToResponseAsync(CollabSphere.Entities.Domain.Comment comment)
+    {
+        var user = await _context.Users
+            .Where(u => u.Id == comment.UserId)
+            .Select(u => new CollabSphere.Modules.Comment.Models.CommentUserDto
+            {
+                Id = u.Id,
+                UserName = u.UserName,
+                AvatarId = u.AvatarId
+            })
+            .FirstOrDefaultAsync();
+
+        var votes = await _context.Votes
+            .Where(v => v.CommentId == comment.Id)
+            .Include(v => v.User)
+            .Select(v => new CommentVoteDto
+            {
+                Id = v.Id,
+                IsUpvote = v.VoteType == "Up",
+                User = new CommentVoteUserDto
+                {
+                    Id = v.User.Id,
+                    UserName = v.User.UserName,
+                    AvatarId = v.User.AvatarId
+                }
+            })
+            .ToListAsync();
+
+        var upvoteCount = votes.Count(v => v.IsUpvote);
+        var downvoteCount = votes.Count(v => !v.IsUpvote);
+
+        var childComments = new List<CommentResponse>();
+        if (comment.ChildComments != null && comment.ChildComments.Any())
+        {
+            foreach (var child in comment.ChildComments.OrderByDescending(c => c.CreatedOn))
+            {
+                childComments.Add(await MapCommentToResponseAsync(child));
+            }
+        }
+
+        return new CommentResponse
+        {
+            Id = comment.Id,
+            Content = comment.Content,
+            User = user,
+            PostId = comment.PostId,
+            ParentCommentId = comment.ParentCommentId,
+            UpvoteCount = upvoteCount,
+            DownvoteCount = downvoteCount,
+            Votes = votes,
+            CreatedOn = comment.CreatedOn,
+            ChildComments = childComments
+        };
+    }
+
     public async Task<CommentResponse> CreateCommentAsync(CreateCommentRequest request, Guid userId)
     {
         // Check if post exists
@@ -64,18 +119,7 @@ public class CommentServices : ICommentService
         await _context.Comments.AddAsync(comment);
         await _context.SaveChangesAsync();
 
-        // Return response
-        return new CommentResponse
-        {
-            Id = comment.Id,
-            Content = comment.Content,
-            UserId = comment.UserId,
-            PostId = comment.PostId,
-            ParentCommentId = comment.ParentCommentId,
-            Score = comment.Score,
-            CreatedOn = comment.CreatedOn,
-            Replies = new List<CommentResponse>()
-        };
+        return await MapCommentToResponseAsync(comment);
     }
 
     public async Task<CommentResponse> GetCommentByIdAsync(Guid commentId)
@@ -89,29 +133,7 @@ public class CommentServices : ICommentService
             throw new NotFoundException("Bình luận không tồn tại");
         }
 
-        var response = new CommentResponse
-        {
-            Id = comment.Id,
-            Content = comment.Content,
-            UserId = comment.UserId,
-            PostId = comment.PostId,
-            ParentCommentId = comment.ParentCommentId,
-            Score = comment.Score,
-            CreatedOn = comment.CreatedOn,
-            Replies = comment.ChildComments.Select(c => new CommentResponse
-            {
-                Id = c.Id,
-                Content = c.Content,
-                UserId = c.UserId,
-                PostId = c.PostId,
-                ParentCommentId = c.ParentCommentId,
-                Score = c.Score,
-                CreatedOn = c.CreatedOn,
-                Replies = new List<CommentResponse>()
-            }).ToList()
-        };
-
-        return response;
+        return await MapCommentToResponseAsync(comment);
     }
 
     public async Task<List<CommentResponse>> GetCommentsByPostIdAsync(Guid postId)
@@ -126,32 +148,22 @@ public class CommentServices : ICommentService
         // Get all root comments (comments without parent) for the post
         var comments = await _context.Comments
             .Include(c => c.ChildComments)
+                .ThenInclude(c => c.User)
+            .Include(c => c.ChildComments)
+                .ThenInclude(c => c.Votes)
+                    .ThenInclude(v => v.User)
+            .Include(c => c.User)
+            .Include(c => c.Votes)
+                .ThenInclude(v => v.User)
             .Where(c => c.PostId == postId && c.ParentCommentId == null)
             .OrderByDescending(c => c.CreatedOn)
             .ToListAsync();
 
-        // Map to response model with nested replies
-        var response = comments.Select(c => new CommentResponse
+        var response = new List<CommentResponse>();
+        foreach (var comment in comments)
         {
-            Id = c.Id,
-            Content = c.Content,
-            UserId = c.UserId,
-            PostId = c.PostId,
-            ParentCommentId = c.ParentCommentId,
-            Score = c.Score,
-            CreatedOn = c.CreatedOn,
-            Replies = c.ChildComments.Select(reply => new CommentResponse
-            {
-                Id = reply.Id,
-                Content = reply.Content,
-                UserId = reply.UserId,
-                PostId = reply.PostId,
-                ParentCommentId = reply.ParentCommentId,
-                Score = reply.Score,
-                CreatedOn = reply.CreatedOn,
-                Replies = new List<CommentResponse>()
-            }).OrderByDescending(r => r.CreatedOn).ToList()
-        }).ToList();
+            response.Add(await MapCommentToResponseAsync(comment));
+        }
 
         return response;
     }
@@ -203,35 +215,13 @@ public class CommentServices : ICommentService
             throw new UnauthorizedAccessException("Bạn không có quyền cập nhật bình luận này");
         }
 
-        // Cập nhật nội dung
         comment.Content = request.Content;
         comment.UpdatedBy = userId;
         comment.UpdatedOn = DateTime.Now;
 
         await _context.SaveChangesAsync();
 
-        // Return response
-        return new CommentResponse
-        {
-            Id = comment.Id,
-            Content = comment.Content,
-            UserId = comment.UserId,
-            PostId = comment.PostId,
-            ParentCommentId = comment.ParentCommentId,
-            Score = comment.Score,
-            CreatedOn = comment.CreatedOn,
-            Replies = comment.ChildComments.Select(c => new CommentResponse
-            {
-                Id = c.Id,
-                Content = c.Content,
-                UserId = c.UserId,
-                PostId = c.PostId,
-                ParentCommentId = c.ParentCommentId,
-                Score = c.Score,
-                CreatedOn = c.CreatedOn,
-                Replies = new List<CommentResponse>()
-            }).OrderByDescending(r => r.CreatedOn).ToList()
-        };
+        return await MapCommentToResponseAsync(comment);
     }
 
     private async Task UpdateCommentScoreAsync(Guid commentId)
@@ -316,28 +306,11 @@ public class CommentServices : ICommentService
             .OrderByDescending(c => c.CreatedOn)
             .ToListAsync();
 
-        // Map to response model
-        var response = comments.Select(c => new CommentResponse
+        var response = new List<CommentResponse>();
+        foreach (var comment in comments)
         {
-            Id = c.Id,
-            Content = c.Content,
-            UserId = c.UserId,
-            PostId = c.PostId,
-            ParentCommentId = c.ParentCommentId,
-            Score = c.Score,
-            CreatedOn = c.CreatedOn,
-            Replies = c.ChildComments.Select(reply => new CommentResponse
-            {
-                Id = reply.Id,
-                Content = reply.Content,
-                UserId = reply.UserId,
-                PostId = reply.PostId,
-                ParentCommentId = reply.ParentCommentId,
-                Score = reply.Score,
-                CreatedOn = reply.CreatedOn,
-                Replies = new List<CommentResponse>()
-            }).OrderByDescending(r => r.CreatedOn).ToList()
-        }).ToList();
+            response.Add(await MapCommentToResponseAsync(comment));
+        }
 
         return response;
     }
@@ -368,28 +341,11 @@ public class CommentServices : ICommentService
             .OrderByDescending(c => c.CreatedOn)
             .ToListAsync();
 
-        // Map to response model
-        var response = comments.Select(c => new CommentResponse
+        var response = new List<CommentResponse>();
+        foreach (var comment in comments)
         {
-            Id = c.Id,
-            Content = c.Content,
-            UserId = c.UserId,
-            PostId = c.PostId,
-            ParentCommentId = c.ParentCommentId,
-            Score = c.Score,
-            CreatedOn = c.CreatedOn,
-            Replies = c.ChildComments.Select(reply => new CommentResponse
-            {
-                Id = reply.Id,
-                Content = reply.Content,
-                UserId = reply.UserId,
-                PostId = reply.PostId,
-                ParentCommentId = reply.ParentCommentId,
-                Score = reply.Score,
-                CreatedOn = reply.CreatedOn,
-                Replies = new List<CommentResponse>()
-            }).OrderByDescending(r => r.CreatedOn).ToList()
-        }).ToList();
+            response.Add(await MapCommentToResponseAsync(comment));
+        }
 
         return response;
     }

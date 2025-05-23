@@ -34,21 +34,158 @@ public class PostService : IPostService
 
     private ICollection<CommentDto> MapComments(ICollection<CommentEntity> comments)
     {
-        return comments.Select(c => new CommentDto
+        // Lấy các comment gốc (không có parent)
+        var rootComments = comments.Where(c => c.ParentCommentId == null).ToList();
+
+        // Tạo dictionary để map comment level 1 với tất cả các reply của nó (level 2+)
+        var commentReplies = comments
+            .Where(c => c.ParentCommentId.HasValue)
+            .GroupBy(c => GetLevel1ParentId(c, comments))
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CreatedOn).ToList());
+
+        return rootComments.Select(c => MapCommentWithChildren(c, comments, commentReplies)).ToList();
+    }
+
+    private Guid GetLevel1ParentId(CommentEntity comment, ICollection<CommentEntity> allComments)
+    {
+        var parentComment = allComments.FirstOrDefault(c => c.Id == comment.ParentCommentId.Value);
+        if (parentComment == null)
         {
-            Id = c.Id,
-            Content = c.Content,
-            CreatedBy = c.CreatedBy,
-            CreatedOn = c.CreatedOn,
-            PostId = c.PostId,
-            ParentCommentId = c.ParentCommentId,
-            User = c.User == null ? null : new CommentUserDto
+            return comment.ParentCommentId.Value;
+        }
+
+        // Nếu parent là comment gốc (level 0), trả về ID của comment hiện tại
+        // vì comment hiện tại là level 1
+        if (!parentComment.ParentCommentId.HasValue)
+        {
+            return comment.Id;
+        }
+
+        // Nếu parent không phải comment gốc, tìm parent level 1
+        var level1Parent = allComments.FirstOrDefault(c => c.Id == parentComment.ParentCommentId.Value);
+        if (level1Parent == null || !level1Parent.ParentCommentId.HasValue)
+        {
+            return parentComment.Id; // Parent là level 1
+        }
+
+        return parentComment.Id; // Parent là level 1
+    }
+
+    private CommentDto MapCommentWithChildren(CommentEntity comment, ICollection<CommentEntity> allComments, Dictionary<Guid, List<CommentEntity>> commentReplies)
+    {
+        var upvotes = comment.Votes.Count(v => v.VoteType == "Up");
+        var downvotes = comment.Votes.Count(v => v.VoteType == "Down");
+
+        // Lấy các comment con trực tiếp (level 1)
+        var directChildren = allComments
+            .Where(c => c.ParentCommentId == comment.Id)
+            .OrderByDescending(c => c.CreatedOn);
+
+        var childComments = new List<CommentDto>();
+        foreach (var child in directChildren)
+        {
+            var childDto = new CommentDto
             {
-                Id = c.User.Id,
-                UserName = c.User.UserName,
-                AvatarId = c.User.AvatarId
+                Id = child.Id,
+                Content = child.Content,
+                CreatedBy = child.CreatedBy,
+                CreatedOn = child.CreatedOn,
+                PostId = child.PostId,
+                ParentCommentId = child.ParentCommentId,
+                UpvoteCount = child.Votes.Count(v => v.VoteType == "Up"),
+                DownvoteCount = child.Votes.Count(v => v.VoteType == "Down"),
+                User = child.User == null ? null : new CommentUserDto
+                {
+                    Id = child.User.Id,
+                    UserName = child.User.UserName,
+                    AvatarId = child.User.AvatarId
+                },
+                Votes = child.Votes.Select(v => new VoteDto
+                {
+                    Id = v.Id,
+                    UserId = v.UserId,
+                    VoteType = v.VoteType,
+                    User = v.User == null ? null : new CommentUserDto
+                    {
+                        Id = v.User.Id,
+                        UserName = v.User.UserName,
+                        AvatarId = v.User.AvatarId
+                    }
+                }).ToList(),
+                ChildComments = new List<CommentDto>()
+            };
+
+            // Thêm các reply level 2+ vào comment level 1
+            if (commentReplies.ContainsKey(child.Id))
+            {
+                foreach (var reply in commentReplies[child.Id])
+                {
+                    childDto.ChildComments.Add(new CommentDto
+                    {
+                        Id = reply.Id,
+                        Content = reply.Content,
+                        CreatedBy = reply.CreatedBy,
+                        CreatedOn = reply.CreatedOn,
+                        PostId = reply.PostId,
+                        ParentCommentId = reply.ParentCommentId,
+                        UpvoteCount = reply.Votes.Count(v => v.VoteType == "Up"),
+                        DownvoteCount = reply.Votes.Count(v => v.VoteType == "Down"),
+                        User = reply.User == null ? null : new CommentUserDto
+                        {
+                            Id = reply.User.Id,
+                            UserName = reply.User.UserName,
+                            AvatarId = reply.User.AvatarId
+                        },
+                        Votes = reply.Votes.Select(v => new VoteDto
+                        {
+                            Id = v.Id,
+                            UserId = v.UserId,
+                            VoteType = v.VoteType,
+                            User = v.User == null ? null : new CommentUserDto
+                            {
+                                Id = v.User.Id,
+                                UserName = v.User.UserName,
+                                AvatarId = v.User.AvatarId
+                            }
+                        }).ToList(),
+                        ChildComments = new List<CommentDto>() // Level 2+ không có child comments
+                    });
+                }
             }
-        }).ToList();
+
+            childComments.Add(childDto);
+        }
+
+        return new CommentDto
+        {
+            Id = comment.Id,
+            Content = comment.Content,
+            CreatedBy = comment.CreatedBy,
+            CreatedOn = comment.CreatedOn,
+            PostId = comment.PostId,
+            ParentCommentId = comment.ParentCommentId,
+            UpvoteCount = upvotes,
+            DownvoteCount = downvotes,
+            User = comment.User == null ? null : new CommentUserDto
+            {
+                Id = comment.User.Id,
+                UserName = comment.User.UserName,
+                AvatarId = comment.User.AvatarId
+            },
+            Votes = comment.Votes.Select(v => new VoteDto
+            {
+                Id = v.Id,
+                UserId = v.UserId,
+                VoteType = v.VoteType,
+                User = v.User == null ? null : new CommentUserDto
+                {
+                    Id = v.User.Id,
+                    UserName = v.User.UserName,
+                    AvatarId = v.User.AvatarId
+                }
+            }).ToList(),
+            ChildComments = childComments
+        };
     }
 
     private ICollection<VoteDto> MapVotes(ICollection<Vote> votes)
@@ -59,6 +196,12 @@ public class PostService : IPostService
             PostId = v.PostId ?? Guid.Empty,
             UserId = v.UserId,
             VoteType = v.VoteType,
+            User = v.User == null ? null : new CommentUserDto
+            {
+                Id = v.User.Id,
+                UserName = v.User.UserName,
+                AvatarId = v.User.AvatarId
+            },
             CreatedOn = v.CreatedOn,
             CreatedBy = v.CreatedBy,
             UpdatedOn = v.UpdatedOn,
@@ -94,7 +237,18 @@ public class PostService : IPostService
         var posts = await _context.Posts
             .Include(p => p.Comments)
                 .ThenInclude(c => c.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.Votes)
+                    .ThenInclude(v => v.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.Votes)
+                        .ThenInclude(v => v.User)
             .Include(p => p.Votes)
+                .ThenInclude(v => v.User)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
@@ -109,7 +263,18 @@ public class PostService : IPostService
         var post = await _context.Posts
             .Include(p => p.Comments)
                 .ThenInclude(c => c.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.Votes)
+                    .ThenInclude(v => v.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.Votes)
+                        .ThenInclude(v => v.User)
             .Include(p => p.Votes)
+                .ThenInclude(v => v.User)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
@@ -125,12 +290,24 @@ public class PostService : IPostService
     {
         var posts = await _context.Posts
             .Where(post => post.CreatedBy == getPostByUserId)
-            .Include(post => post.Comments).ThenInclude(c => c.User)
-            .Include(post => post.Votes)
-            .Include(post => post.Shares)
-            .Include(post => post.Reports)
-            .Include(post => post.PostImages)
-            .Include(post => post.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.Votes)
+                    .ThenInclude(v => v.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.Votes)
+                        .ThenInclude(v => v.User)
+            .Include(p => p.Votes)
+                .ThenInclude(v => v.User)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
             .AsNoTracking()
             .ToListAsync();
 
