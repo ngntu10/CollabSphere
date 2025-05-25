@@ -11,4 +11,6 @@ public interface IMessageService
     Task DeleteMessageAsync(Guid messageId, Guid userId);
     Task<List<Message>> SearchMessagesAsync(Guid senderId, Guid receiverId, string keyword);
     Task ArchiveConversationAsync(Guid senderId, Guid receiverId, bool isArchived);
+    Task BlockUserAsync(Guid userId, Guid blockedUserId);
+    Task<bool> IsUserBlockedAsync(Guid userId, Guid blockedUserId);
 }

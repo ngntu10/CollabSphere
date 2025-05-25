@@ -108,5 +108,24 @@ namespace CollabSphere.Modules.Chat.Services.Impl
                 .OrderBy(m => m.SentAt)
                 .ToListAsync();
         }
+
+        public async Task BlockUserAsync(Guid userId, Guid blockedUserId)
+        {
+            var block = new BlockedUser
+            {
+                UserId = userId,
+                BlockedUserId = blockedUserId,
+                BlockedOn = DateTime.UtcNow
+            };
+            _context.BlockedUsers.Add(block);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task<bool> IsUserBlockedAsync(Guid userId, Guid blockedUserId)
+        {
+            return await _context.BlockedUsers
+                .AnyAsync(b => b.UserId == userId && b.BlockedUserId == blockedUserId);
+        }
+
     }
 }
