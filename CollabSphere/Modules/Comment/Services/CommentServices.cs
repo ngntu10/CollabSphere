@@ -24,6 +24,16 @@ public class CommentServices : ICommentService
 
     private async Task<CommentResponse> MapCommentToResponseAsync(CollabSphere.Entities.Domain.Comment comment)
     {
+        Console.WriteLine($"Mapping comment {comment.Id}");
+        Console.WriteLine($"Raw votes count: {comment.Votes?.Count ?? 0}");
+        if (comment.Votes != null)
+        {
+            foreach (var vote in comment.Votes)
+            {
+                Console.WriteLine($"Vote: Id={vote.Id}, UserId={vote.UserId}, Type={vote.VoteType}");
+            }
+        }
+
         var user = await _context.Users
             .Where(u => u.Id == comment.UserId)
             .Select(u => new CollabSphere.Modules.Comment.Models.CommentUserDto
@@ -34,24 +44,32 @@ public class CommentServices : ICommentService
             })
             .FirstOrDefaultAsync();
 
-        var votes = await _context.Votes
-            .Where(v => v.CommentId == comment.Id)
-            .Include(v => v.User)
-            .Select(v => new CommentVoteDto
-            {
-                Id = v.Id,
-                IsUpvote = v.VoteType == "Up",
-                User = new CommentVoteUserDto
-                {
-                    Id = v.User.Id,
-                    UserName = v.User.UserName,
-                    AvatarId = v.User.AvatarId
-                }
-            })
-            .ToListAsync();
+        // Ensure votes are properly loaded and counted
+        var votes = comment.Votes?.ToList() ?? new List<Vote>();
+        Console.WriteLine($"Processed votes count: {votes.Count}");
 
-        var upvoteCount = votes.Count(v => v.IsUpvote);
-        var downvoteCount = votes.Count(v => !v.IsUpvote);
+        var upvoteCount = votes.Count(v => v.VoteType?.ToLower() == "upvote");
+        var downvoteCount = votes.Count(v => v.VoteType?.ToLower() == "downvote");
+        Console.WriteLine($"Upvotes: {upvoteCount}, Downvotes: {downvoteCount}");
+
+        var voteDtos = votes.Select(v => new CommentVoteDto
+        {
+            Id = v.Id,
+            CommentId = comment.Id,
+            UserId = v.UserId,
+            VoteType = v.VoteType,
+            User = v.User == null ? null : new CommentVoteUserDto
+            {
+                Id = v.User.Id,
+                UserName = v.User.UserName,
+                AvatarId = v.User.AvatarId
+            },
+            CreatedOn = v.CreatedOn,
+            CreatedBy = v.CreatedBy,
+            UpdatedOn = v.UpdatedOn,
+            UpdatedBy = v.UpdatedBy
+        }).ToList();
+        Console.WriteLine($"Mapped vote DTOs count: {voteDtos.Count}");
 
         var childComments = new List<CommentResponse>();
         if (comment.ChildComments != null && comment.ChildComments.Any())
@@ -71,7 +89,7 @@ public class CommentServices : ICommentService
             ParentCommentId = comment.ParentCommentId,
             UpvoteCount = upvoteCount,
             DownvoteCount = downvoteCount,
-            Votes = votes,
+            Votes = voteDtos,
             CreatedOn = comment.CreatedOn,
             ChildComments = childComments
         };
@@ -145,27 +163,89 @@ public class CommentServices : ICommentService
             throw new NotFoundException("Bài viết không tồn tại");
         }
 
-        // Get all root comments (comments without parent) for the post
-        var comments = await _context.Comments
-            .Include(c => c.ChildComments)
-                .ThenInclude(c => c.User)
-            .Include(c => c.ChildComments)
-                .ThenInclude(c => c.Votes)
-                    .ThenInclude(v => v.User)
+        // Get all comments for the post with votes and users
+        var allComments = await _context.Comments
             .Include(c => c.User)
             .Include(c => c.Votes)
                 .ThenInclude(v => v.User)
-            .Where(c => c.PostId == postId && c.ParentCommentId == null)
+            .Where(c => c.PostId == postId)
             .OrderByDescending(c => c.CreatedOn)
+            .AsSplitQuery()
             .ToListAsync();
 
+        // Organize comments into a hierarchy
+        var rootComments = allComments
+            .Where(c => c.ParentCommentId == null)
+            .ToList();
+
+        var commentsByParentId = allComments
+            .Where(c => c.ParentCommentId != null)
+            .GroupBy(c => c.ParentCommentId.Value)
+            .ToDictionary(g => g.Key, g => g.ToList());
+
+        // Map root comments and their children
         var response = new List<CommentResponse>();
-        foreach (var comment in comments)
+        foreach (var comment in rootComments)
         {
-            response.Add(await MapCommentToResponseAsync(comment));
+            var commentResponse = await MapCommentToResponseAsync(comment);
+            MapChildComments(commentResponse, commentsByParentId);
+            response.Add(commentResponse);
         }
 
         return response;
+    }
+
+    private void MapChildComments(CommentResponse parentComment, Dictionary<Guid, List<CollabSphere.Entities.Domain.Comment>> commentsByParentId)
+    {
+        if (!commentsByParentId.ContainsKey(parentComment.Id))
+            return;
+
+        var childComments = commentsByParentId[parentComment.Id];
+        foreach (var childComment in childComments.OrderByDescending(c => c.CreatedOn))
+        {
+            // Ensure votes are properly loaded and counted
+            var votes = childComment.Votes?.ToList() ?? new List<Vote>();
+            var upvoteCount = votes.Count(v => v.VoteType?.ToLower() == "upvote");
+            var downvoteCount = votes.Count(v => v.VoteType?.ToLower() == "downvote");
+
+            var childResponse = new CommentResponse
+            {
+                Id = childComment.Id,
+                Content = childComment.Content,
+                User = childComment.User == null ? null : new CollabSphere.Modules.Comment.Models.CommentUserDto
+                {
+                    Id = childComment.User.Id,
+                    UserName = childComment.User.UserName,
+                    AvatarId = childComment.User.AvatarId
+                },
+                PostId = childComment.PostId,
+                ParentCommentId = childComment.ParentCommentId,
+                UpvoteCount = upvoteCount,
+                DownvoteCount = downvoteCount,
+                Votes = votes.Select(v => new CommentVoteDto
+                {
+                    Id = v.Id,
+                    CommentId = childComment.Id,
+                    UserId = v.UserId,
+                    VoteType = v.VoteType,
+                    User = v.User == null ? null : new CommentVoteUserDto
+                    {
+                        Id = v.User.Id,
+                        UserName = v.User.UserName,
+                        AvatarId = v.User.AvatarId
+                    },
+                    CreatedOn = v.CreatedOn,
+                    CreatedBy = v.CreatedBy,
+                    UpdatedOn = v.UpdatedOn,
+                    UpdatedBy = v.UpdatedBy
+                }).ToList(),
+                CreatedOn = childComment.CreatedOn,
+                ChildComments = new List<CommentResponse>()
+            };
+
+            parentComment.ChildComments.Add(childResponse);
+            MapChildComments(childResponse, commentsByParentId);
+        }
     }
 
     public async Task<bool> DeleteCommentAsync(Guid commentId, Guid userId)
@@ -332,14 +412,30 @@ public class CommentServices : ICommentService
             throw new NotFoundException("Người dùng không tồn tại");
         }
 
+        Console.WriteLine($"Finding comments voted by user {userId} with vote type {normalizedVoteType}");
+
         // Lấy danh sách các comment mà người dùng đã vote theo loại vote
         var comments = await _context.Comments
+            .Include(c => c.User)
+            .Include(c => c.Votes)
+                .ThenInclude(v => v.User)
             .Include(c => c.ChildComments)
+                .ThenInclude(cc => cc.User)
+            .Include(c => c.ChildComments)
+                .ThenInclude(cc => cc.Votes)
+                    .ThenInclude(v => v.User)
             .Where(c => c.Votes.Any(v => v.UserId == userId &&
                                     (v.VoteType.ToLower() == normalizedVoteType ||
                                      v.VoteType == capitalizedVoteType)))
             .OrderByDescending(c => c.CreatedOn)
+            .AsSplitQuery()
             .ToListAsync();
+
+        Console.WriteLine($"Found {comments.Count} comments");
+        foreach (var comment in comments)
+        {
+            Console.WriteLine($"Comment {comment.Id} has {comment.Votes?.Count ?? 0} votes");
+        }
 
         var response = new List<CommentResponse>();
         foreach (var comment in comments)

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace CollabSphere.Modules.Comment.Models;
 
@@ -12,8 +13,14 @@ public class CommentVoteUserDto
 public class CommentVoteDto
 {
     public Guid Id { get; set; }
-    public bool IsUpvote { get; set; }
+    public Guid CommentId { get; set; }
+    public Guid UserId { get; set; }
+    public string VoteType { get; set; }
     public CommentVoteUserDto User { get; set; }
+    public DateTime CreatedOn { get; set; }
+    public Guid CreatedBy { get; set; }
+    public DateTime? UpdatedOn { get; set; }
+    public Guid UpdatedBy { get; set; }
 }
 
 public class CommentUserDto
