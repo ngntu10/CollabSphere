@@ -83,6 +83,12 @@ namespace CollabSphere.Modules.Chat.Hubs
 
             await Clients.Group(roomId).SendAsync("ReceiveMessage", senderId, content);
         }
+
+        public async Task GetConversations(string userId)
+        {
+            var conversations = await _messageService.GetConversationsAsync(Guid.Parse(userId), _activeUsers.Keys.ToList());
+            await Clients.Caller.SendAsync("ReceiveConversations", conversations);
+        }
     }
 
 }

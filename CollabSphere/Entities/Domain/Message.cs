@@ -16,6 +16,8 @@ namespace CollabSphere.Entities.Domain
 
         public bool ReadStatus { get; set; }
 
+        public bool IsArchived { get; set; }
+
         public string MessageType { get; set; }
 
         public virtual User Sender { get; set; }
