@@ -12,7 +12,7 @@ public class User : IdentityUser<Guid>, IAuditedEntity
 
     public string Gender { get; set; }
 
-    public string AvatarId { get; set; }
+    public string AvatarId { get; set; } = string.Empty;
 
     // Navigation properties
     public virtual ICollection<Post> Posts { get; } = new List<Post>();
