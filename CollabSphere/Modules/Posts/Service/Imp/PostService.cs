@@ -54,11 +54,10 @@ public class PostService : IPostService
             return comment.ParentCommentId.Value;
         }
 
-        // Nếu parent là comment gốc (level 0), trả về ID của comment hiện tại
-        // vì comment hiện tại là level 1
+        // Nếu parent là comment gốc (level 0), trả về ID của parent
         if (!parentComment.ParentCommentId.HasValue)
         {
-            return comment.Id;
+            return parentComment.Id;
         }
 
         // Nếu parent không phải comment gốc, tìm parent level 1
@@ -73,8 +72,10 @@ public class PostService : IPostService
 
     private CommentDto MapCommentWithChildren(CommentEntity comment, ICollection<CommentEntity> allComments, Dictionary<Guid, List<CommentEntity>> commentReplies)
     {
-        var upvotes = comment.Votes.Count(v => v.VoteType == "Up");
-        var downvotes = comment.Votes.Count(v => v.VoteType == "Down");
+        // Ensure votes are loaded
+        var votes = comment.Votes?.ToList() ?? new List<Vote>();
+        var upvotes = votes.Count(v => v.VoteType?.ToLower() == "upvote");
+        var downvotes = votes.Count(v => v.VoteType?.ToLower() == "downvote");
 
         // Lấy các comment con trực tiếp (level 1)
         var directChildren = allComments
@@ -84,6 +85,11 @@ public class PostService : IPostService
         var childComments = new List<CommentDto>();
         foreach (var child in directChildren)
         {
+            // Ensure child votes are loaded
+            var childVotes = child.Votes?.ToList() ?? new List<Vote>();
+            var childUpvotes = childVotes.Count(v => v.VoteType?.ToLower() == "upvote");
+            var childDownvotes = childVotes.Count(v => v.VoteType?.ToLower() == "downvote");
+
             var childDto = new CommentDto
             {
                 Id = child.Id,
@@ -92,15 +98,15 @@ public class PostService : IPostService
                 CreatedOn = child.CreatedOn,
                 PostId = child.PostId,
                 ParentCommentId = child.ParentCommentId,
-                UpvoteCount = child.Votes.Count(v => v.VoteType == "Up"),
-                DownvoteCount = child.Votes.Count(v => v.VoteType == "Down"),
+                UpvoteCount = childUpvotes,
+                DownvoteCount = childDownvotes,
                 User = child.User == null ? null : new CommentUserDto
                 {
                     Id = child.User.Id,
                     UserName = child.User.UserName,
                     AvatarId = child.User.AvatarId
                 },
-                Votes = child.Votes.Select(v => new VoteDto
+                Votes = childVotes.Select(v => new VoteDto
                 {
                     Id = v.Id,
                     UserId = v.UserId,
@@ -110,7 +116,11 @@ public class PostService : IPostService
                         Id = v.User.Id,
                         UserName = v.User.UserName,
                         AvatarId = v.User.AvatarId
-                    }
+                    },
+                    CreatedOn = v.CreatedOn,
+                    CreatedBy = v.CreatedBy,
+                    UpdatedOn = v.UpdatedOn,
+                    UpdatedBy = v.UpdatedBy
                 }).ToList(),
                 ChildComments = new List<CommentDto>()
             };
@@ -120,6 +130,11 @@ public class PostService : IPostService
             {
                 foreach (var reply in commentReplies[child.Id])
                 {
+                    // Ensure reply votes are loaded
+                    var replyVotes = reply.Votes?.ToList() ?? new List<Vote>();
+                    var replyUpvotes = replyVotes.Count(v => v.VoteType?.ToLower() == "upvote");
+                    var replyDownvotes = replyVotes.Count(v => v.VoteType?.ToLower() == "downvote");
+
                     childDto.ChildComments.Add(new CommentDto
                     {
                         Id = reply.Id,
@@ -128,15 +143,15 @@ public class PostService : IPostService
                         CreatedOn = reply.CreatedOn,
                         PostId = reply.PostId,
                         ParentCommentId = reply.ParentCommentId,
-                        UpvoteCount = reply.Votes.Count(v => v.VoteType == "Up"),
-                        DownvoteCount = reply.Votes.Count(v => v.VoteType == "Down"),
+                        UpvoteCount = replyUpvotes,
+                        DownvoteCount = replyDownvotes,
                         User = reply.User == null ? null : new CommentUserDto
                         {
                             Id = reply.User.Id,
                             UserName = reply.User.UserName,
                             AvatarId = reply.User.AvatarId
                         },
-                        Votes = reply.Votes.Select(v => new VoteDto
+                        Votes = replyVotes.Select(v => new VoteDto
                         {
                             Id = v.Id,
                             UserId = v.UserId,
@@ -146,7 +161,11 @@ public class PostService : IPostService
                                 Id = v.User.Id,
                                 UserName = v.User.UserName,
                                 AvatarId = v.User.AvatarId
-                            }
+                            },
+                            CreatedOn = v.CreatedOn,
+                            CreatedBy = v.CreatedBy,
+                            UpdatedOn = v.UpdatedOn,
+                            UpdatedBy = v.UpdatedBy
                         }).ToList(),
                         ChildComments = new List<CommentDto>() // Level 2+ không có child comments
                     });
@@ -172,7 +191,7 @@ public class PostService : IPostService
                 UserName = comment.User.UserName,
                 AvatarId = comment.User.AvatarId
             },
-            Votes = comment.Votes.Select(v => new VoteDto
+            Votes = votes.Select(v => new VoteDto
             {
                 Id = v.Id,
                 UserId = v.UserId,
@@ -182,7 +201,11 @@ public class PostService : IPostService
                     Id = v.User.Id,
                     UserName = v.User.UserName,
                     AvatarId = v.User.AvatarId
-                }
+                },
+                CreatedOn = v.CreatedOn,
+                CreatedBy = v.CreatedBy,
+                UpdatedOn = v.UpdatedOn,
+                UpdatedBy = v.UpdatedBy
             }).ToList(),
             ChildComments = childComments
         };
@@ -273,12 +296,19 @@ public class PostService : IPostService
                 .ThenInclude(c => c.ChildComments)
                     .ThenInclude(cc => cc.Votes)
                         .ThenInclude(v => v.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.ChildComments)
+                        .ThenInclude(ccc => ccc.Votes)
+                            .ThenInclude(v => v.User)
             .Include(p => p.Votes)
                 .ThenInclude(v => v.User)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)
             .Include(p => p.User)
+            .AsNoTracking()
+            .AsSplitQuery()
             .FirstOrDefaultAsync(p => p.Id == postId);
 
         if (post == null) throw new NotFoundException("Post not found");
@@ -616,7 +646,18 @@ public class PostService : IPostService
             .OrderByDescending(p => p.CreatedOn)
             .Include(p => p.Comments)
                 .ThenInclude(c => c.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.Votes)
+                    .ThenInclude(v => v.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.Votes)
+                        .ThenInclude(v => v.User)
             .Include(p => p.Votes)
+                .ThenInclude(v => v.User)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
             .Include(p => p.PostImages)

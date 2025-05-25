@@ -8,7 +8,6 @@ namespace CollabSphere.Modules.Comment.Models
     public class VoteCommentRequest
     {
         public Guid UserId { get; set; }
-
         [JsonPropertyName("voteType")]
         public VoteType VoteType { get; set; }
     }

@@ -9,6 +9,7 @@ using CollabSphere.Modules.Comment.Models;
 using CollabSphere.Modules.Comment.Services;
 using CollabSphere.Modules.Comment.Validators;
 
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,7 @@ namespace CollabSphere.Modules.Comment.Controllers;
 
 [ApiController]
 [Route("api/comments")]
+[Authorize]
 public class CommentController : ControllerBase
 {
     private readonly ICommentService _commentService;
@@ -230,17 +232,18 @@ public class CommentController : ControllerBase
         if (idValidationResult != null)
             return idValidationResult;
 
-        if (request == null || request.UserId == Guid.Empty)
+        if (request == null)
         {
             return BadRequest(ApiResponse<object>.Failure(
                 StatusCodes.Status400BadRequest,
-                new List<string> { "Dữ liệu vote không hợp lệ hoặc UserId trống" }
+                new List<string> { "Dữ liệu vote không hợp lệ" }
             ));
         }
 
         try
         {
-            bool result = await _commentService.VoteCommentAsync(id, request.UserId, request.VoteType);
+            var userId = User.GetUserId();
+            bool result = await _commentService.VoteCommentAsync(id, userId, request.VoteType);
             string message = result
                 ? $"Vote {request.VoteType.ToString().ToLower()} thành công"
                 : "Bạn đã bỏ vote thành công.";
