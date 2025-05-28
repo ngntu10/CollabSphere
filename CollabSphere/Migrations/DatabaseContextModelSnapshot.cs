@@ -22,6 +22,26 @@ namespace CollabSphere.Migrations
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
 
+            modelBuilder.Entity("CollabSphere.Entities.Domain.BlockedUser", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("BlockedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("BlockedUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BlockedUsers");
+                });
+
             modelBuilder.Entity("CollabSphere.Entities.Domain.Comment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -148,6 +168,9 @@ namespace CollabSphere.Migrations
 
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<string>("MessageType")
                         .IsRequired()
@@ -678,6 +701,43 @@ namespace CollabSphere.Migrations
                     b.ToTable("AspNetUsers", (string)null);
                 });
 
+            modelBuilder.Entity("CollabSphere.Entities.Domain.UserBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("BlockedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("BlockedId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("BlockerId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlockedId");
+
+                    b.HasIndex("BlockerId", "BlockedId")
+                        .IsUnique();
+
+                    b.ToTable("UserBlocks");
+                });
+
             modelBuilder.Entity("CollabSphere.Entities.Domain.VideoCall", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1070,6 +1130,25 @@ namespace CollabSphere.Migrations
                     b.Navigation("List");
                 });
 
+            modelBuilder.Entity("CollabSphere.Entities.Domain.UserBlock", b =>
+                {
+                    b.HasOne("CollabSphere.Entities.Domain.User", "Blocked")
+                        .WithMany("BlockedByUsers")
+                        .HasForeignKey("BlockedId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CollabSphere.Entities.Domain.User", "Blocker")
+                        .WithMany("BlockedUsers")
+                        .HasForeignKey("BlockerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Blocked");
+
+                    b.Navigation("Blocker");
+                });
+
             modelBuilder.Entity("CollabSphere.Entities.Domain.VideoCall", b =>
                 {
                     b.HasOne("CollabSphere.Entities.Domain.User", "Caller")
@@ -1199,6 +1278,10 @@ namespace CollabSphere.Migrations
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.User", b =>
                 {
+                    b.Navigation("BlockedByUsers");
+
+                    b.Navigation("BlockedUsers");
+
                     b.Navigation("Comments");
 
                     b.Navigation("Followers");

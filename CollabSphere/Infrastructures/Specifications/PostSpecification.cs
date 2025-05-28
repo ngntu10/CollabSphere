@@ -10,6 +10,13 @@ public static class PostSpecification
         var spec = new BaseSpecification<Entities.Domain.Post>(x => x.CreatedBy == userId);
         spec.ApplyPaging(skip, take);
         spec.ApplyOrderByDescending(x => x.CreatedOn);
+        spec.AddInclude(x => x.Comments);
+        spec.AddInclude("Comments.User");
+        spec.AddInclude(x => x.Votes);
+        spec.AddInclude(x => x.Shares);
+        spec.AddInclude(x => x.Reports);
+        spec.AddInclude(x => x.PostImages);
+        spec.AddInclude(x => x.User);
 
         return spec;
     }

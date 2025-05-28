@@ -34,8 +34,11 @@ public class PostController : ControllerBase
             ));
         }
 
+        // Lấy UserId của người dùng hiện tại từ token
+        var userId = User.GetUserId();
+
         // Tạo bài post thông qua service
-        var post = await _postService.CreatePostAsync(createPostDto);
+        var post = await _postService.CreatePostAsync(createPostDto, userId);
         if (post == null)
         {
             return BadRequest(ApiResponse<object>.Failure(
@@ -50,6 +53,7 @@ public class PostController : ControllerBase
             Id = post.Id,
             Title = post.Title,
             Content = post.Content,
+            UserId = userId,
             PostImages = post.PostImages?.Select(x => x.ImageID ?? "").ToList() // Xử lý null cho ImageID
         };
 
@@ -60,6 +64,21 @@ public class PostController : ControllerBase
         ));
     }
 
+    [HttpGet("user/{userId}/{getBy}")]
+    public async Task<IActionResult> GetPostsByUpDownVote(Guid userId, string getBy)
+    {
+        if (getBy != "upvote" && getBy != "downvote")
+        {
+            return BadRequest(ApiResponse<object>.Failure(
+                StatusCodes.Status400BadRequest,
+                new List<string> { "Giá trị getBy không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'." }
+            ));
+        }
+        var posts = await _postService.GetPostsByUpDownVoteAsync(userId, getBy);
+        return Ok(ApiResponse<List<PostDto>>.Success(
+            StatusCodes.Status200OK, posts, "Lấy danh sách bài post thành công"
+        ));
+    }
 
     [HttpPut("{id}/update")]
     public async Task<IActionResult> UpdatePostAsync(Guid id, [FromBody] UpdatePostDto model)
@@ -72,7 +91,7 @@ public class PostController : ControllerBase
             ));
         }
 
-        var updatedByUserId = User.GetUserId(); // Lấy userId từ JWT claims
+        var updatedByUserId = User.GetUserId();
 
         try
         {
@@ -207,39 +226,124 @@ public class PostController : ControllerBase
     [HttpGet("user/{userId}/paginated")]
     public async Task<IActionResult> GetPaginatedPostsByUserId(
         Guid userId,
-        [FromQuery] PaginationRequest request)
+        [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var paginatedPosts = await _postService.GetPaginatedPostsByUserId(userId, request);
+        var posts = await _postService.GetAllPostByUserId(userId);
+        var total = posts.Count;
+        var pagedPosts = posts
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+        var totalPages = (int) Math.Ceiling(total / (double) pageSize);
+
+        var response = new PaginationResponse<PostDto>(
+            pageNumber,
+            totalPages,
+            pageSize,
+            total,
+            pagedPosts
+        );
 
         return Ok(ApiResponse<PaginationResponse<PostDto>>.Success(
             StatusCodes.Status200OK,
-            paginatedPosts,
+            response,
             $"Lấy danh sách bài post của người dùng {userId} thành công"
         ));
     }
     [HttpGet("home")]
-    public async Task<IActionResult> GetHomePosts(int pageNumber = 1, int pageSize = 10)
+    public async Task<IActionResult> GetHomePosts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var posts = await _postService.GetHomePostsAsync(pageNumber, pageSize);
-        return Ok(posts);
+        var posts = await _postService.GetHomePostsAsync();
+        var total = posts.Count;
+        var pagedPosts = posts
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToList();
+        var totalPages = (int) Math.Ceiling(total / (double) pageSize);
+
+        var response = new PaginationResponse<PostDto>(
+            pageNumber,
+            totalPages,
+            pageSize,
+            total,
+            pagedPosts
+        );
+
+        return Ok(ApiResponse<PaginationResponse<PostDto>>.Success(
+            StatusCodes.Status200OK,
+            response,
+            "Lấy danh sách bài post thành công"
+        ));
     }
     [HttpGet("popular")]
-    public async Task<IActionResult> GetPopularPosts(int pageNumber = 1, int pageSize = 10)
+    public async Task<IActionResult> GetPopularPosts([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
-        var posts = await _postService.GetPopularPostsAsync(pageNumber, pageSize);
-        return Ok(posts);
+        var response = await _postService.GetPopularPostsAsync(pageNumber, pageSize);
+        return Ok(ApiResponse<PaginationResponse<PostDto>>.Success(
+            StatusCodes.Status200OK,
+            response,
+            "Lấy danh sách bài post phổ biến thành công"
+        ));
     }
 
     [HttpGet("recent-followed")]
-    public async Task<IActionResult> GetRecentPostsFromFollowedUsers()
+    public async Task<IActionResult> GetRecentPostsFromFollowedUsers([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
     {
         var userId = User.GetUserId();
-        var posts = await _postService.GetRecentPostsFromFollowedUsersAsync(userId);
+        var response = await _postService.GetRecentPostsFromFollowedUsersAsync(userId, pageNumber, pageSize);
+        return Ok(ApiResponse<PaginationResponse<PostDto>>.Success(
+            StatusCodes.Status200OK,
+            response,
+            "Lấy danh sách bài post mới nhất từ người dùng đang theo dõi thành công"
+        ));
+    }
+
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchPosts([FromQuery] string searchTerm, int pageNumber = 1, int pageSize = 10)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return BadRequest(ApiResponse<object>.Failure(
+                StatusCodes.Status400BadRequest,
+                new List<string> { "Từ khóa tìm kiếm không được để trống" }
+            ));
+        }
+
+        var posts = await _postService.SearchPostsAsync(searchTerm, pageNumber, pageSize);
 
         return Ok(ApiResponse<List<PostDto>>.Success(
             StatusCodes.Status200OK,
             posts,
-            "Lấy danh sách bài post mới nhất từ người dùng đang theo dõi thành công"
+            $"Tìm thấy {posts.Count} kết quả cho từ khóa '{searchTerm}'"
         ));
+    }
+
+    [HttpGet("user/{userId}/voted/{voteType}")]
+    public async Task<IActionResult> GetUserVotedPosts(Guid userId, string voteType)
+    {
+        if (voteType != "upvote" && voteType != "downvote")
+        {
+            return BadRequest(ApiResponse<object>.Failure(
+                StatusCodes.Status400BadRequest,
+                new List<string> { "Giá trị voteType không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'." }
+            ));
+        }
+
+        try
+        {
+            var posts = await _postService.GetUserVotedPostsAsync(userId, voteType);
+            return Ok(ApiResponse<List<PostDto>>.Success(
+                StatusCodes.Status200OK,
+                posts,
+                $"Lấy danh sách bài post đã {voteType} của người dùng {userId} thành công"
+            ));
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(StatusCodes.Status500InternalServerError, ApiResponse<object>.Failure(
+                StatusCodes.Status500InternalServerError,
+                new List<string> { ex.Message }
+            ));
+        }
     }
 }

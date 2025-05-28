@@ -15,6 +15,8 @@ using CollabSphere.Modules.Posts.Specifications;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
+using CommentEntity = CollabSphere.Entities.Domain.Comment;
+
 namespace CollabSphere.Modules.Posts.Service.Imp;
 
 public class PostService : IPostService
@@ -30,22 +32,357 @@ public class PostService : IPostService
         _postRepository = postRepository;
     }
 
+    private ICollection<CommentDto> MapComments(ICollection<CommentEntity> comments)
+    {
+        // Lấy các comment gốc (không có parent)
+        var rootComments = comments.Where(c => c.ParentCommentId == null).ToList();
+
+        // Tạo dictionary để map comment level 1 với tất cả các reply của nó (level 2+)
+        var commentReplies = comments
+            .Where(c => c.ParentCommentId.HasValue)
+            .GroupBy(c => GetLevel1ParentId(c, comments))
+            .ToDictionary(g => g.Key, g => g.OrderByDescending(c => c.CreatedOn).ToList());
+
+        return rootComments.Select(c => MapCommentWithChildren(c, comments, commentReplies)).ToList();
+    }
+
+    private Guid GetLevel1ParentId(CommentEntity comment, ICollection<CommentEntity> allComments)
+    {
+        var parentComment = allComments.FirstOrDefault(c => c.Id == comment.ParentCommentId.Value);
+        if (parentComment == null)
+        {
+            return comment.ParentCommentId.Value;
+        }
+
+        // Nếu parent là comment gốc (level 0), trả về ID của parent
+        if (!parentComment.ParentCommentId.HasValue)
+        {
+            return parentComment.Id;
+        }
+
+        // Nếu parent không phải comment gốc, tìm parent level 1
+        var level1Parent = allComments.FirstOrDefault(c => c.Id == parentComment.ParentCommentId.Value);
+        if (level1Parent == null || !level1Parent.ParentCommentId.HasValue)
+        {
+            return parentComment.Id; // Parent là level 1
+        }
+
+        return parentComment.Id; // Parent là level 1
+    }
+
+    private CommentDto MapCommentWithChildren(CommentEntity comment, ICollection<CommentEntity> allComments, Dictionary<Guid, List<CommentEntity>> commentReplies)
+    {
+        // Ensure votes are loaded
+        var votes = comment.Votes?.ToList() ?? new List<Vote>();
+        var upvotes = votes.Count(v => v.VoteType?.ToLower() == "upvote");
+        var downvotes = votes.Count(v => v.VoteType?.ToLower() == "downvote");
+
+        // Lấy các comment con trực tiếp (level 1)
+        var directChildren = allComments
+            .Where(c => c.ParentCommentId == comment.Id)
+            .OrderByDescending(c => c.CreatedOn);
+
+        var childComments = new List<CommentDto>();
+        foreach (var child in directChildren)
+        {
+            // Ensure child votes are loaded
+            var childVotes = child.Votes?.ToList() ?? new List<Vote>();
+            var childUpvotes = childVotes.Count(v => v.VoteType?.ToLower() == "upvote");
+            var childDownvotes = childVotes.Count(v => v.VoteType?.ToLower() == "downvote");
+
+            var childDto = new CommentDto
+            {
+                Id = child.Id,
+                Content = child.Content,
+                CreatedBy = child.CreatedBy,
+                CreatedOn = child.CreatedOn,
+                PostId = child.PostId,
+                ParentCommentId = child.ParentCommentId,
+                UpvoteCount = childUpvotes,
+                DownvoteCount = childDownvotes,
+                User = child.User == null ? null : new CommentUserDto
+                {
+                    Id = child.User.Id,
+                    UserName = child.User.UserName,
+                    AvatarId = child.User.AvatarId
+                },
+                Votes = childVotes.Select(v => new VoteDto
+                {
+                    Id = v.Id,
+                    UserId = v.UserId,
+                    VoteType = v.VoteType,
+                    User = v.User == null ? null : new CommentUserDto
+                    {
+                        Id = v.User.Id,
+                        UserName = v.User.UserName,
+                        AvatarId = v.User.AvatarId
+                    },
+                    CreatedOn = v.CreatedOn,
+                    CreatedBy = v.CreatedBy,
+                    UpdatedOn = v.UpdatedOn,
+                    UpdatedBy = v.UpdatedBy
+                }).ToList(),
+                ChildComments = new List<CommentDto>()
+            };
+
+            // Thêm các reply level 2+ vào comment level 1
+            if (commentReplies.ContainsKey(child.Id))
+            {
+                foreach (var reply in commentReplies[child.Id])
+                {
+                    // Ensure reply votes are loaded
+                    var replyVotes = reply.Votes?.ToList() ?? new List<Vote>();
+                    var replyUpvotes = replyVotes.Count(v => v.VoteType?.ToLower() == "upvote");
+                    var replyDownvotes = replyVotes.Count(v => v.VoteType?.ToLower() == "downvote");
+
+                    childDto.ChildComments.Add(new CommentDto
+                    {
+                        Id = reply.Id,
+                        Content = reply.Content,
+                        CreatedBy = reply.CreatedBy,
+                        CreatedOn = reply.CreatedOn,
+                        PostId = reply.PostId,
+                        ParentCommentId = reply.ParentCommentId,
+                        UpvoteCount = replyUpvotes,
+                        DownvoteCount = replyDownvotes,
+                        User = reply.User == null ? null : new CommentUserDto
+                        {
+                            Id = reply.User.Id,
+                            UserName = reply.User.UserName,
+                            AvatarId = reply.User.AvatarId
+                        },
+                        Votes = replyVotes.Select(v => new VoteDto
+                        {
+                            Id = v.Id,
+                            UserId = v.UserId,
+                            VoteType = v.VoteType,
+                            User = v.User == null ? null : new CommentUserDto
+                            {
+                                Id = v.User.Id,
+                                UserName = v.User.UserName,
+                                AvatarId = v.User.AvatarId
+                            },
+                            CreatedOn = v.CreatedOn,
+                            CreatedBy = v.CreatedBy,
+                            UpdatedOn = v.UpdatedOn,
+                            UpdatedBy = v.UpdatedBy
+                        }).ToList(),
+                        ChildComments = new List<CommentDto>() // Level 2+ không có child comments
+                    });
+                }
+            }
+
+            childComments.Add(childDto);
+        }
+
+        return new CommentDto
+        {
+            Id = comment.Id,
+            Content = comment.Content,
+            CreatedBy = comment.CreatedBy,
+            CreatedOn = comment.CreatedOn,
+            PostId = comment.PostId,
+            ParentCommentId = comment.ParentCommentId,
+            UpvoteCount = upvotes,
+            DownvoteCount = downvotes,
+            User = comment.User == null ? null : new CommentUserDto
+            {
+                Id = comment.User.Id,
+                UserName = comment.User.UserName,
+                AvatarId = comment.User.AvatarId
+            },
+            Votes = votes.Select(v => new VoteDto
+            {
+                Id = v.Id,
+                UserId = v.UserId,
+                VoteType = v.VoteType,
+                User = v.User == null ? null : new CommentUserDto
+                {
+                    Id = v.User.Id,
+                    UserName = v.User.UserName,
+                    AvatarId = v.User.AvatarId
+                },
+                CreatedOn = v.CreatedOn,
+                CreatedBy = v.CreatedBy,
+                UpdatedOn = v.UpdatedOn,
+                UpdatedBy = v.UpdatedBy
+            }).ToList(),
+            ChildComments = childComments
+        };
+    }
+
+    private ICollection<VoteDto> MapVotes(ICollection<Vote> votes)
+    {
+        return votes.Select(v => new VoteDto
+        {
+            Id = v.Id,
+            PostId = v.PostId ?? Guid.Empty,
+            UserId = v.UserId,
+            VoteType = v.VoteType,
+            User = v.User == null ? null : new CommentUserDto
+            {
+                Id = v.User.Id,
+                UserName = v.User.UserName,
+                AvatarId = v.User.AvatarId
+            },
+            CreatedOn = v.CreatedOn,
+            CreatedBy = v.CreatedBy,
+            UpdatedOn = v.UpdatedOn,
+            UpdatedBy = v.UpdatedBy
+        }).ToList();
+    }
+
+    private PostDto MapPost(Entities.Domain.Post post)
+    {
+        return new PostDto
+        {
+            Id = post.Id,
+            Title = post.Title,
+            Content = post.Content,
+            Category = post.Category,
+            CreatedBy = post.CreatedBy,
+            CreatedOn = post.CreatedOn,
+            UpvoteCount = post.UpvoteCount,
+            DownvoteCount = post.DownvoteCount,
+            ShareCount = post.ShareCount,
+            Comments = MapComments(post.Comments),
+            Votes = MapVotes(post.Votes),
+            Shares = post.Shares,
+            Reports = post.Reports,
+            PostImages = post.PostImages ?? new List<PostImages>(),
+            Username = post.User != null ? post.User.UserName : string.Empty,
+            UserAvatar = post.User != null ? post.User.AvatarId : string.Empty
+        };
+    }
+
     public async Task<List<PostDto>> GetAllPostsAsync()
     {
+        var posts = await _context.Posts
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.Votes)
+                    .ThenInclude(v => v.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.Votes)
+                        .ThenInclude(v => v.User)
+            .Include(p => p.Votes)
+                .ThenInclude(v => v.User)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
+            .ToListAsync();
 
-        var posts = await _context.Posts.ToListAsync();
-        return _mapper.Map<List<PostDto>>(posts);
+        return posts.Select(MapPost).ToList();
     }
 
     public async Task<PostDto> GetPostByIdAsync(Guid postId)
     {
-        var post = await _context.Posts.FindAsync(postId);
+        var post = await _context.Posts
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.Votes)
+                    .ThenInclude(v => v.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.Votes)
+                        .ThenInclude(v => v.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.ChildComments)
+                        .ThenInclude(ccc => ccc.Votes)
+                            .ThenInclude(v => v.User)
+            .Include(p => p.Votes)
+                .ThenInclude(v => v.User)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
+            .AsNoTracking()
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(p => p.Id == postId);
+
         if (post == null) throw new NotFoundException("Post not found");
 
-        return _mapper.Map<PostDto>(post);
+        return MapPost(post);
     }
 
-    public async Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto)
+    public async Task<List<PostDto>> GetAllPostByUserId(Guid getPostByUserId)
+    {
+        var posts = await _context.Posts
+            .Where(post => post.CreatedBy == getPostByUserId)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.Votes)
+                    .ThenInclude(v => v.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.Votes)
+                        .ThenInclude(v => v.User)
+            .Include(p => p.Votes)
+                .ThenInclude(v => v.User)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
+            .AsNoTracking()
+            .ToListAsync();
+
+        return posts.Select(MapPost).ToList();
+    }
+
+    public async Task<List<PostDto>> GetPostsByUpDownVoteAsync(Guid userId, string getBy)
+    {
+        List<Entities.Domain.Post> posts;
+
+        if (getBy == "upvote")
+        {
+            posts = await _context.Posts
+                .Where(p => p.CreatedBy == userId && p.UpvoteCount >= p.DownvoteCount)
+                .Include(p => p.Comments)
+                    .ThenInclude(c => c.User)
+                .Include(p => p.Votes)
+                .Include(p => p.Shares)
+                .Include(p => p.Reports)
+                .Include(p => p.PostImages)
+                .Include(p => p.User)
+                .ToListAsync();
+        }
+        else if (getBy == "downvote")
+        {
+            posts = await _context.Posts
+                .Where(p => p.CreatedBy == userId && p.DownvoteCount > p.UpvoteCount)
+                .Include(p => p.Comments)
+                    .ThenInclude(c => c.User)
+                .Include(p => p.Votes)
+                .Include(p => p.Shares)
+                .Include(p => p.Reports)
+                .Include(p => p.PostImages)
+                .Include(p => p.User)
+                .ToListAsync();
+        }
+        else
+        {
+            throw new ArgumentException("Giá trị getBy không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'.");
+        }
+
+        return posts.Select(MapPost).ToList();
+    }
+
+    public async Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto, Guid userId)
     {
         if (createPostDto == null)
         {
@@ -60,9 +397,14 @@ public class PostService : IPostService
 
             if (string.IsNullOrEmpty(createPostDto.Category))
                 throw new ArgumentException("Category is required");
-            if (createPostDto.UserId == Guid.Empty)
+
+            if (userId == Guid.Empty)
                 throw new ArgumentException("UserId is required");
 
+            // Verify user exists before creating post
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+                throw new NotFoundException($"User with ID {userId} not found");
 
             // Ánh xạ từ CreatePostDto sang Post
             var post = _mapper.Map<CollabSphere.Entities.Domain.Post>(createPostDto)
@@ -74,7 +416,9 @@ public class PostService : IPostService
             post.UpvoteCount = 0;
             post.DownvoteCount = 0;
             post.ShareCount = 0;
-            post.CreatedBy = createPostDto.UserId;
+            post.CreatedBy = userId;
+            post.UserId = userId; // Ensure UserId is explicitly set to match CreatedBy
+
             // Xử lý PostImages nếu có
             if (createPostDto.PostImages != null && createPostDto.PostImages.Any())
             {
@@ -163,49 +507,54 @@ public class PostService : IPostService
         };
     }
 
-
-
-
     public async Task<bool> DeletePostAsync(Guid id, Guid deletedByUserId)
     {
-        var post = await _context.Posts.FindAsync(id);
-        if (post == null)
-            return false;
+        try
+        {
+            var post = await _context.Posts
+                .Include(p => p.Comments)
+                .Include(p => p.Votes)
+                .Include(p => p.Shares)
+                .Include(p => p.Reports)
+                .Include(p => p.PostImages)
+                .FirstOrDefaultAsync(p => p.Id == id);
 
+            if (post == null)
+                return false;
 
-        if (post.CreatedBy != deletedByUserId)
-            return false;
-
-        _context.Posts.Remove(post);
-        await _context.SaveChangesAsync();
-        return true;
-    }
-    public async Task<List<PostDto>> GetAllPostByUserId(Guid getPostByUserId)
-    {
-        var posts = await _context.Posts
-            .Where(post => post.CreatedBy == getPostByUserId)
-            .Include(post => post.Comments)
-            .Include(post => post.Votes)
-            .Include(post => post.Shares)
-            .Include(post => post.Reports)
-            .Select(post => new PostDto
+            // Kiểm tra quyền xóa
+            if (post.CreatedBy != deletedByUserId)
             {
-                Id = post.Id,
-                Title = post.Title,
-                Content = post.Content,
-                CreatedBy = post.CreatedBy,
-                CreatedOn = post.CreatedOn,
-                UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),
-                DownvoteCount = post.Votes.Count(v => v.VoteType == "downvote"),
-                ShareCount = post.Shares.Count,
-                Comments = post.Comments,
-                Votes = post.Votes,
-                Shares = post.Shares,
-                Reports = post.Reports
-            })
-            .ToListAsync();
+                // Kiểm tra xem người dùng có phải là admin không
+                var userRoles = await _context.UserRoles
+                    .Where(ur => ur.UserId == deletedByUserId)
+                    .Select(ur => ur.RoleId)
+                    .ToListAsync();
 
-        return posts;
+                var adminRole = await _context.Roles
+                    .FirstOrDefaultAsync(r => r.Name == "Admin");
+
+                if (adminRole == null || !userRoles.Contains(adminRole.Id))
+                    return false;
+            }
+
+            // Xóa các dữ liệu liên quan
+            _context.Comments.RemoveRange(post.Comments);
+            _context.Votes.RemoveRange(post.Votes);
+            _context.Shares.RemoveRange(post.Shares);
+            _context.Reports.RemoveRange(post.Reports);
+            _context.PostImages.RemoveRange(post.PostImages);
+
+            // Xóa post
+            _context.Posts.Remove(post);
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error deleting post: {ex.Message}");
+            return false;
+        }
     }
 
     public async Task<PaginationResponse<PostDto>> GetPaginatedPostsByUserId(Guid userId, PaginationRequest request)
@@ -217,21 +566,7 @@ public class PostService : IPostService
         var posts = await _postRepository.GetAllAsync(spec);
         var total = await _postRepository.CountAsync(countSpec);
 
-        var postDtos = posts.Select(post => new PostDto
-        {
-            Id = post.Id,
-            Title = post.Title,
-            Content = post.Content,
-            CreatedBy = post.CreatedBy,
-            CreatedOn = post.CreatedOn,
-            UpvoteCount = post.Votes.Count(v => v.VoteType == "upvote"),
-            DownvoteCount = post.Votes.Count(v => v.VoteType == "downvote"),
-            ShareCount = post.Shares.Count,
-            Comments = post.Comments,
-            Votes = post.Votes,
-            Shares = post.Shares,
-            Reports = post.Reports
-        }).ToList();
+        var postDtos = posts.Select(MapPost).ToList();
 
         var totalPages = (int) Math.Ceiling(total / (double) request.PageSize);
 
@@ -255,6 +590,7 @@ public class PostService : IPostService
         _context.Posts.Update(post);
         await _context.SaveChangesAsync();
     }
+
     public async Task<bool> VotePostAsync(Guid postId, Guid userId, VoteType voteType)
     {
         var post = await _context.Posts.FindAsync(postId);
@@ -301,108 +637,164 @@ public class PostService : IPostService
         await _context.SaveChangesAsync();
         await UpdatePostVoteCount(postId);
 
-
         return true;
     }
-    public async Task<List<PostDto>> GetHomePostsAsync(int pageNumber, int pageSize)
+
+    public async Task<List<PostDto>> GetHomePostsAsync()
     {
-        return await _context.Posts
+        var posts = await _context.Posts
             .OrderByDescending(p => p.CreatedOn)
-            .Skip((pageNumber - 1) * pageSize)
-            .Take(pageSize)
             .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.Votes)
+                    .ThenInclude(v => v.User)
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.ChildComments)
+                    .ThenInclude(cc => cc.Votes)
+                        .ThenInclude(v => v.User)
             .Include(p => p.Votes)
+                .ThenInclude(v => v.User)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
-            .Select(p => new PostDto
-            {
-                Id = p.Id,
-                Title = p.Title,
-                Content = p.Content,
-                CreatedBy = p.CreatedBy,
-                CreatedOn = p.CreatedOn,
-                UpvoteCount = p.UpvoteCount,
-                DownvoteCount = p.DownvoteCount,
-                ShareCount = p.ShareCount,
-
-                Comments = p.Comments,
-                Votes = p.Votes,
-                Shares = p.Shares,
-                Reports = p.Reports
-            })
-            .AsNoTracking()
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
             .ToListAsync();
+
+        return posts.Select(MapPost).ToList();
     }
 
-
-    public async Task<List<PostDto>> GetPopularPostsAsync(int pageNumber, int pageSize)
+    public async Task<PaginationResponse<PostDto>> GetPopularPostsAsync(int pageNumber = 1, int pageSize = 10)
     {
-        return await _context.Posts
+        var query = _context.Posts
             .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
             .AsNoTracking()
             .Select(p => new
             {
                 Post = p,
-                PopularityScore = p.UpvoteCount + p.Comments.Count // có thể cân chỉnh lại tùy chiến lược
+                PopularityScore = p.UpvoteCount + p.Comments.Count
             })
             .OrderByDescending(x => x.PopularityScore)
+            .Select(x => x.Post);
+
+        var total = await query.CountAsync();
+        var posts = await query
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
-            .Select(x => new PostDto
-            {
-                Id = x.Post.Id,
-                Title = x.Post.Title,
-                Content = x.Post.Content,
-                CreatedBy = x.Post.CreatedBy,
-                CreatedOn = x.Post.CreatedOn,
-                UpvoteCount = x.Post.UpvoteCount,
-                DownvoteCount = x.Post.DownvoteCount,
-                ShareCount = x.Post.ShareCount,
-                Comments = x.Post.Comments,
-                Votes = x.Post.Votes,
-                Shares = x.Post.Shares,
-                Reports = x.Post.Reports
-            })
             .ToListAsync();
+
+        var totalPages = (int) Math.Ceiling(total / (double) pageSize);
+
+        return new PaginationResponse<PostDto>(
+            pageNumber,
+            totalPages,
+            pageSize,
+            total,
+            posts.Select(MapPost).ToList()
+        );
     }
 
-    public async Task<List<PostDto>> GetRecentPostsFromFollowedUsersAsync(Guid userId, int count = 3)
+    public async Task<PaginationResponse<PostDto>> GetRecentPostsFromFollowedUsersAsync(Guid userId, int pageNumber = 1, int pageSize = 10)
     {
-        // Get the list of users that the current user is following
         var followedUserIds = await _context.Follows
             .Where(uf => uf.FollowerId == userId)
             .Select(uf => uf.FollowingId)
             .ToListAsync();
 
-        // Get the most recent posts from those users
-        return await _context.Posts
+        var query = _context.Posts
             .Where(p => followedUserIds.Contains(p.CreatedBy))
             .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
             .Include(p => p.Votes)
             .Include(p => p.Shares)
             .Include(p => p.Reports)
-            .OrderByDescending(p => p.CreatedOn)
-            .Take(count)
-            .Select(p => new PostDto
-            {
-                Id = p.Id,
-                Title = p.Title,
-                Content = p.Content,
-                CreatedBy = p.CreatedBy,
-                CreatedOn = p.CreatedOn,
-                UpvoteCount = p.UpvoteCount,
-                DownvoteCount = p.DownvoteCount,
-                ShareCount = p.ShareCount,
-                Comments = p.Comments,
-                Votes = p.Votes,
-                Shares = p.Shares,
-                Reports = p.Reports
-            })
-            .AsNoTracking()
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
+            .OrderByDescending(p => p.CreatedOn);
+
+        var total = await query.CountAsync();
+        var posts = await query
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
+
+        var totalPages = (int) Math.Ceiling(total / (double) pageSize);
+
+        return new PaginationResponse<PostDto>(
+            pageNumber,
+            totalPages,
+            pageSize,
+            total,
+            posts.Select(MapPost).ToList()
+        );
+    }
+
+    public async Task<List<PostDto>> SearchPostsAsync(string searchTerm, int pageNumber = 1, int pageSize = 10)
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return await GetHomePostsAsync();
+        }
+
+        var lowerSearchTerm = searchTerm.ToLower();
+
+        var posts = await _context.Posts
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
+            .Where(p =>
+                p.Title.ToLower().Contains(lowerSearchTerm) ||
+                p.Content.ToLower().Contains(lowerSearchTerm) ||
+                p.Category.ToLower().Contains(lowerSearchTerm) ||
+                p.User.UserName.ToLower().Contains(lowerSearchTerm)
+            )
+            .OrderByDescending(p => p.CreatedOn)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
+
+        return posts.Select(MapPost).ToList();
+    }
+
+    public async Task<List<PostDto>> GetUserVotedPostsAsync(Guid userId, string voteType)
+    {
+        if (string.IsNullOrEmpty(voteType) || (voteType.ToLower() != "upvote" && voteType.ToLower() != "downvote"))
+            throw new ArgumentException("Giá trị voteType không hợp lệ. Chỉ chấp nhận 'upvote' hoặc 'downvote'.");
+
+        var normalizedVoteType = voteType.ToLower() == "upvote" ? "upvote" : "downvote";
+        var capitalizedVoteType = char.ToUpper(normalizedVoteType[0]) + normalizedVoteType.Substring(1);
+
+        Console.WriteLine($"Tìm bài viết với userId={userId} và voteType={normalizedVoteType} hoặc {capitalizedVoteType}");
+
+        var posts = await _context.Posts
+            .Include(p => p.Comments)
+                .ThenInclude(c => c.User)
+            .Include(p => p.Votes)
+            .Include(p => p.Shares)
+            .Include(p => p.Reports)
+            .Include(p => p.PostImages)
+            .Include(p => p.User)
+            .Where(p => p.Votes.Any(v => v.UserId == userId &&
+                                     (v.VoteType.ToLower() == normalizedVoteType ||
+                                      v.VoteType == capitalizedVoteType)))
+            .OrderByDescending(p => p.CreatedOn)
+            .ToListAsync();
+
+        Console.WriteLine($"Đã tìm thấy {posts.Count} bài viết");
+        return posts.Select(MapPost).ToList();
     }
 }
 

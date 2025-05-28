@@ -15,16 +15,19 @@ namespace CollabSphere.Modules.Posts.Service
 
         Task<PostDto> GetPostByIdAsync(Guid postId);
 
-        Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto);
+        Task<Entities.Domain.Post> CreatePostAsync(CreatePostDto createPostDto, Guid userId);
 
         Task<PostResponseModel> UpdatePostAsync(Guid id, UpdatePostDto model, Guid updatedByUserId);
         Task<bool> DeletePostAsync(Guid id, Guid deletedByUserId);
         Task<List<PostDto>> GetAllPostByUserId(Guid userId);
         Task<PaginationResponse<PostDto>> GetPaginatedPostsByUserId(Guid userId, PaginationRequest request);
         Task<bool> VotePostAsync(Guid postId, Guid userId, VoteType voteType);
-        Task<List<PostDto>> GetHomePostsAsync(int pageNumber, int pageSize);
-        Task<List<PostDto>> GetPopularPostsAsync(int pageNumber, int pageSize);
-        Task<List<PostDto>> GetRecentPostsFromFollowedUsersAsync(Guid userId, int count = 3);
+        Task<List<PostDto>> GetHomePostsAsync();
+        Task<PaginationResponse<PostDto>> GetPopularPostsAsync(int pageNumber = 1, int pageSize = 10);
+        Task<List<PostDto>> GetPostsByUpDownVoteAsync(Guid userId, string getBy);
+        Task<PaginationResponse<PostDto>> GetRecentPostsFromFollowedUsersAsync(Guid userId, int pageNumber = 1, int pageSize = 10);
+        Task<List<PostDto>> SearchPostsAsync(string searchTerm, int pageNumber = 1, int pageSize = 10);
+        Task<List<PostDto>> GetUserVotedPostsAsync(Guid userId, string voteType);
     }
 }
 

@@ -12,7 +12,7 @@ public class User : IdentityUser<Guid>, IAuditedEntity
 
     public string Gender { get; set; }
 
-    public string AvatarId { get; set; }
+    public string AvatarId { get; set; } = string.Empty;
 
     // Navigation properties
     public virtual ICollection<Post> Posts { get; } = new List<Post>();
@@ -28,6 +28,10 @@ public class User : IdentityUser<Guid>, IAuditedEntity
     public virtual ICollection<Follow> Followers { get; } = new List<Follow>();
 
     public virtual ICollection<Follow> Following { get; } = new List<Follow>();
+
+    // User blocks
+    public virtual ICollection<UserBlock> BlockedUsers { get; } = new List<UserBlock>();
+    public virtual ICollection<UserBlock> BlockedByUsers { get; } = new List<UserBlock>();
 
     public virtual ICollection<Message> SentMessages { get; } = new List<Message>();
 

@@ -6,4 +6,11 @@ public interface IMessageService
 {
     Task SaveMessageAsync(Message message);
     Task<List<Message>> GetMessagesBetweenUsersAsync(Guid senderId, Guid receiverId);
+    Task<List<ChatRoomResponse>> GetConversationsAsync(Guid userId, List<string> activeUsers);
+    Task UpdateMessageStatusAsync(Guid messageId, bool status);
+    Task DeleteMessageAsync(Guid messageId, Guid userId);
+    Task<List<Message>> SearchMessagesAsync(Guid senderId, Guid receiverId, string keyword);
+    Task ArchiveConversationAsync(Guid senderId, Guid receiverId, bool isArchived);
+    Task BlockUserAsync(Guid userId, Guid blockedUserId);
+    Task<bool> IsUserBlockedAsync(Guid userId, Guid blockedUserId);
 }

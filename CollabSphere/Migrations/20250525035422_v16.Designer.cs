@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CollabSphere.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20250401131134__v3")]
-    partial class _v3
+    [Migration("20250525035422_v16")]
+    partial class v16
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -24,6 +24,26 @@ namespace CollabSphere.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
+
+            modelBuilder.Entity("CollabSphere.Entities.Domain.BlockedUser", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("BlockedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("BlockedUserId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BlockedUsers");
+                });
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.Comment", b =>
                 {
@@ -152,6 +172,9 @@ namespace CollabSphere.Migrations
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<string>("MessageType")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -241,6 +264,12 @@ namespace CollabSphere.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("longtext")
+                        .HasDefaultValue("General");
+
                     b.Property<string>("Content")
                         .IsRequired()
                         .HasColumnType("longtext");
@@ -256,14 +285,6 @@ namespace CollabSphere.Migrations
 
                     b.Property<int>("ShareCount")
                         .HasColumnType("int");
-
-                    b.Property<Guid>("SubredditId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<string>("ThumbnailUrl")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("varchar(255)");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -283,8 +304,6 @@ namespace CollabSphere.Migrations
                         .HasColumnType("char(36)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("SubredditId");
 
                     b.HasIndex("UserId");
 
@@ -592,7 +611,7 @@ namespace CollabSphere.Migrations
                     b.Property<int>("AccessFailedCount")
                         .HasColumnType("int");
 
-                    b.Property<string>("AvatarUrl")
+                    b.Property<string>("AvatarId")
                         .HasColumnType("longtext");
 
                     b.Property<string>("ConcurrencyStamp")
@@ -612,6 +631,9 @@ namespace CollabSphere.Migrations
 
                     b.Property<bool>("EmailConfirmed")
                         .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Gender")
+                        .HasColumnType("longtext");
 
                     b.Property<DateTime?>("LastLoginDate")
                         .HasColumnType("datetime(6)");
@@ -635,7 +657,8 @@ namespace CollabSphere.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("PhoneNumber")
-                        .HasColumnType("longtext");
+                        .HasMaxLength(10)
+                        .HasColumnType("varchar(10)");
 
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("tinyint(1)");
@@ -672,10 +695,50 @@ namespace CollabSphere.Migrations
                         .IsUnique()
                         .HasDatabaseName("UserNameIndex");
 
+                    b.HasIndex("PhoneNumber")
+                        .IsUnique();
+
                     b.HasIndex("UserName")
                         .IsUnique();
 
                     b.ToTable("AspNetUsers", (string)null);
+                });
+
+            modelBuilder.Entity("CollabSphere.Entities.Domain.UserBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("BlockedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("BlockedId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("BlockerId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("CreatedBy")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UpdatedBy")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime?>("UpdatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("BlockedId");
+
+                    b.HasIndex("BlockerId", "BlockedId")
+                        .IsUnique();
+
+                    b.ToTable("UserBlocks");
                 });
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.VideoCall", b =>
@@ -967,19 +1030,11 @@ namespace CollabSphere.Migrations
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.Post", b =>
                 {
-                    b.HasOne("CollabSphere.Entities.Domain.Subreddit", "Subreddit")
-                        .WithMany("Posts")
-                        .HasForeignKey("SubredditId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("CollabSphere.Entities.Domain.User", "User")
                         .WithMany("Posts")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Subreddit");
 
                     b.Navigation("User");
                 });
@@ -1076,6 +1131,25 @@ namespace CollabSphere.Migrations
                         .IsRequired();
 
                     b.Navigation("List");
+                });
+
+            modelBuilder.Entity("CollabSphere.Entities.Domain.UserBlock", b =>
+                {
+                    b.HasOne("CollabSphere.Entities.Domain.User", "Blocked")
+                        .WithMany("BlockedByUsers")
+                        .HasForeignKey("BlockedId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CollabSphere.Entities.Domain.User", "Blocker")
+                        .WithMany("BlockedUsers")
+                        .HasForeignKey("BlockerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Blocked");
+
+                    b.Navigation("Blocker");
                 });
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.VideoCall", b =>
@@ -1197,8 +1271,6 @@ namespace CollabSphere.Migrations
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.Subreddit", b =>
                 {
-                    b.Navigation("Posts");
-
                     b.Navigation("Subscriptions");
                 });
 
@@ -1209,6 +1281,10 @@ namespace CollabSphere.Migrations
 
             modelBuilder.Entity("CollabSphere.Entities.Domain.User", b =>
                 {
+                    b.Navigation("BlockedByUsers");
+
+                    b.Navigation("BlockedUsers");
+
                     b.Navigation("Comments");
 
                     b.Navigation("Followers");

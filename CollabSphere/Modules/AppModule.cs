@@ -1,11 +1,17 @@
+using System.Text;
+
 using CollabSphere.Modules.Auth.Services;
 using CollabSphere.Modules.Auth.Services.Impl;
 using CollabSphere.Modules.Comment.Services;
 using CollabSphere.Modules.Email.Config;
+using CollabSphere.Modules.Follow;
 using CollabSphere.Modules.TodoItem.Services;
 using CollabSphere.Modules.TodoItem.Services.Impl;
 using CollabSphere.Modules.TodoList.Services;
 using CollabSphere.Modules.TodoList.Services.Impl;
+
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
 
 namespace CollabSphere.Modules;
 
@@ -17,7 +23,11 @@ public static class AppModule
 
         services.AddSampleServices(env);
 
+        services.AddFollowModule();
+
         services.RegisterAutoMapper();
+
+        services.AddJwtAuthentication();
 
         return services;
     }
@@ -42,5 +52,16 @@ public static class AppModule
     public static void AddEmailConfiguration(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddSingleton(configuration.GetSection("SmtpSettings").Get<SmtpSettings>());
+    }
+
+    private static IServiceCollection AddJwtAuthentication(this IServiceCollection services)
+    {
+        services.AddAuthentication(options =>
+        {
+            options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+        });
+
+        return services;
     }
 }

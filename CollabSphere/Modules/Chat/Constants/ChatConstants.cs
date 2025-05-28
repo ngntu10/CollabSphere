@@ -12,4 +12,11 @@ public static class ChatConstants
         public const string USER_ONLINE = "UserOnline";
         public const string USER_OFFLINE = "UserOffline";
     }
+
+    public enum MessageStatus
+    {
+        Sent,
+        Received,
+        Read
+    }
 }
