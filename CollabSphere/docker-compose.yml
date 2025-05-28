@@ -1,31 +1,30 @@
+version: "3.8"
+
 services:
     app:
         container_name: collabsphere-app
-        image: ngntu10/collapsphere:latest
+        image: ngntu10/collabsphere:latest
         build:
             context: .
             dockerfile: Dockerfile
         ports:
-            - "${APP_HTTP_PORT}:80"
-            - "${APP_HTTPS_PORT}:443"
+            - "8080:80"
+            - "8081:443"
         environment:
-            - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
-            - Database__ConnectionString=${DATABASE_CONNECTION_STRING}
-            - ASPNETCORE_URLS=${ASPNETCORE_URLS}
-            - ASPNETCORE_SWAGGER_ENABLED=${ASPNETCORE_SWAGGER_ENABLED}
-              # Vô hiệu hóa cấu hình HTTPS vì chứng chỉ chưa được tạo
-              # - ASPNETCORE_HTTPS_PORT=8081
-              # - ASPNETCORE_Kestrel__Certificates__Default__Password=collabsphere
-              # - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
+            - ASPNETCORE_ENVIRONMENT=Development
+            - Database__ConnectionString=Server=db;Database=collabsphere;User=root;Password=collabsphere;AllowPublicKeyRetrieval=true;Connect Timeout=60;
+            - ASPNETCORE_URLS=http://+:80
+            - ASPNETCORE_SWAGGER_ENABLED=true
+            # Vô hiệu hóa cấu hình HTTPS vì chứng chỉ chưa được tạo
+            # - ASPNETCORE_HTTPS_PORT=8081
+            # - ASPNETCORE_Kestrel__Certificates__Default__Password=collabsphere
+            # - ASPNETCORE_Kestrel__Certificates__Default__Path=/https/aspnetapp.pfx
         depends_on:
             db:
                 condition: service_healthy
         command: ["/wait-for-mysql.sh", "db", "dotnet", "CollabSphere.dll"]
         networks:
             - collabsphere-network
-        volumes:
-            - ${APPDATA}/Microsoft/UserSecrets:/root/.microsoft/usersecrets:ro
-            - ${APPDATA}/ASP.NET/Https:/root/.aspnet/https:ro
 
     db:
         image: mysql:8.0

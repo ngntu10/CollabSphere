@@ -22,17 +22,17 @@ namespace CollabSphere.Modules.Follow.Service.Imp
             _context = context;
         }
 
-        public async Task<FollowDto> FollowUserAsync(Guid followerId, Guid followingId)
+        public async Task<FollowDto> FollowUserAsync(string followerName, string followingName)
         {
             // Không thể follow chính mình
-            if (followerId == followingId)
+            if (followerName == followingName)
             {
                 throw new BadRequestException("Không thể theo dõi chính bạn");
             }
 
             // Kiểm tra người dùng có tồn tại không
-            var follower = await _context.Users.FindAsync(followerId);
-            var following = await _context.Users.FindAsync(followingId);
+            var follower = await _context.Users.FirstOrDefaultAsync(u => u.UserName == followerName);
+            var following = await _context.Users.FirstOrDefaultAsync(u => u.UserName == followingName);
 
             if (follower == null || following == null)
             {
@@ -41,7 +41,7 @@ namespace CollabSphere.Modules.Follow.Service.Imp
 
             // Kiểm tra xem đã follow chưa
             var existingFollow = await _context.Follows
-                .FirstOrDefaultAsync(f => f.FollowerId == followerId && f.FollowingId == followingId);
+                .FirstOrDefaultAsync(f => f.Follower.UserName == followerName && f.Following.UserName == followingName);
 
             if (existingFollow != null)
             {
@@ -50,8 +50,8 @@ namespace CollabSphere.Modules.Follow.Service.Imp
 
             // Kiểm tra xem người dùng có bị chặn không
             var isBlocked = await _context.UserBlocks
-                .AnyAsync(b => (b.BlockerId == followingId && b.BlockedId == followerId) ||
-                              (b.BlockerId == followerId && b.BlockedId == followingId));
+                .AnyAsync(b => (b.Blocker.UserName == followingName && b.Blocked.UserName == followerName) ||
+                              (b.Blocker.UserName == followerName && b.Blocked.UserName == followingName));
 
             if (isBlocked)
             {
@@ -62,12 +62,12 @@ namespace CollabSphere.Modules.Follow.Service.Imp
             var newFollow = new Entities.Domain.Follow
             {
                 Id = Guid.NewGuid(),
-                FollowerId = followerId,
-                FollowingId = followingId,
+                FollowerId = follower.Id,
+                FollowingId = following.Id,
                 FollowedAt = DateTime.UtcNow,
-                CreatedBy = followerId,
+                CreatedBy = follower.Id,
                 CreatedOn = DateTime.UtcNow,
-                UpdatedBy = followerId,
+                UpdatedBy = follower.Id,
                 UpdatedOn = DateTime.UtcNow
             };
 
@@ -88,10 +88,10 @@ namespace CollabSphere.Modules.Follow.Service.Imp
             };
         }
 
-        public async Task<bool> UnfollowUserAsync(Guid followerId, Guid followingId)
+        public async Task<bool> UnfollowUserAsync(string followerName, string followingName)
         {
             var follow = await _context.Follows
-                .FirstOrDefaultAsync(f => f.FollowerId == followerId && f.FollowingId == followingId);
+                .FirstOrDefaultAsync(f => f.Follower.UserName == followerName && f.Following.UserName == followingName);
 
             if (follow == null)
             {
@@ -103,10 +103,10 @@ namespace CollabSphere.Modules.Follow.Service.Imp
             return true;
         }
 
-        public async Task<PaginationResponse<UserDto>> GetFollowersAsync(Guid userId, int page = 1, int pageSize = 10)
+        public async Task<PaginationResponse<UserDto>> GetFollowersAsync(string userName, int page = 1, int pageSize = 10)
         {
             // Kiểm tra user tồn tại
-            var user = await _context.Users.FindAsync(userId);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == userName);
             if (user == null)
             {
                 throw new NotFoundException("Không tìm thấy người dùng");
@@ -114,12 +114,12 @@ namespace CollabSphere.Modules.Follow.Service.Imp
 
             // Lấy tổng số lượng followers
             var totalFollowers = await _context.Follows
-                .Where(f => f.FollowingId == userId)
+                .Where(f => f.Following.UserName == userName)
                 .CountAsync();
 
             // Phân trang và lấy danh sách người theo dõi
             var followers = await _context.Follows
-                .Where(f => f.FollowingId == userId)
+                .Where(f => f.Following.UserName == userName)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(f => new UserDto
@@ -129,19 +129,19 @@ namespace CollabSphere.Modules.Follow.Service.Imp
                     Email = f.Follower.Email,
                     AvatarUrl = f.Follower.AvatarId,
                     Reputation = f.Follower.Reputation,
-                    IsFollowing = _context.Follows.Any(ff => ff.FollowerId == userId && ff.FollowingId == f.FollowerId)
+                    IsFollowing = _context.Follows.Any(ff => ff.Follower.UserName == userName && ff.Following.UserName == f.Follower.UserName)
                 })
                 .ToListAsync();
 
             // Kiểm tra các người dùng đã bị chặn chưa
-            var blockedUserIds = await _context.UserBlocks
-                .Where(b => b.BlockerId == userId)
-                .Select(b => b.BlockedId)
+            var blockedUserNames = await _context.UserBlocks
+                .Where(b => b.Blocker.UserName == userName)
+                .Select(b => b.Blocked.UserName)
                 .ToListAsync();
 
             foreach (var follower in followers)
             {
-                follower.IsBlocked = blockedUserIds.Contains(follower.Id);
+                follower.IsBlocked = blockedUserNames.Contains(follower.UserName);
             }
 
             var totalPages = (int) Math.Ceiling(totalFollowers / (double) pageSize);
@@ -155,10 +155,10 @@ namespace CollabSphere.Modules.Follow.Service.Imp
             );
         }
 
-        public async Task<PaginationResponse<UserDto>> GetFollowingAsync(Guid userId, int page = 1, int pageSize = 10)
+        public async Task<PaginationResponse<UserDto>> GetFollowingAsync(string userName, int page = 1, int pageSize = 10)
         {
             // Kiểm tra user tồn tại
-            var user = await _context.Users.FindAsync(userId);
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == userName);
             if (user == null)
             {
                 throw new NotFoundException("Không tìm thấy người dùng");
@@ -166,12 +166,12 @@ namespace CollabSphere.Modules.Follow.Service.Imp
 
             // Lấy tổng số lượng following
             var totalFollowing = await _context.Follows
-                .Where(f => f.FollowerId == userId)
+                .Where(f => f.Follower.UserName == userName)
                 .CountAsync();
 
             // Phân trang và lấy danh sách người đang theo dõi
             var following = await _context.Follows
-                .Where(f => f.FollowerId == userId)
+                .Where(f => f.Follower.UserName == userName)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(f => new UserDto
@@ -186,14 +186,14 @@ namespace CollabSphere.Modules.Follow.Service.Imp
                 .ToListAsync();
 
             // Kiểm tra các người dùng đã bị chặn chưa
-            var blockedUserIds = await _context.UserBlocks
-                .Where(b => b.BlockerId == userId)
-                .Select(b => b.BlockedId)
+            var blockedUserNames = await _context.UserBlocks
+                .Where(b => b.Blocker.UserName == userName)
+                .Select(b => b.Blocked.UserName)
                 .ToListAsync();
 
             foreach (var follow in following)
             {
-                follow.IsBlocked = blockedUserIds.Contains(follow.Id);
+                follow.IsBlocked = blockedUserNames.Contains(follow.UserName);
             }
 
             var totalPages = (int) Math.Ceiling(totalFollowing / (double) pageSize);
@@ -207,11 +207,11 @@ namespace CollabSphere.Modules.Follow.Service.Imp
             );
         }
 
-        public async Task<PaginationResponse<UserDto>> SearchUsersToFollowAsync(Guid currentUserId, SearchUserRequest request)
+        public async Task<PaginationResponse<UserDto>> SearchUsersToFollowAsync(string currentUserName, SearchUserRequest request)
         {
             // Lấy danh sách user theo search term, loại trừ user hiện tại
             var query = _context.Users
-                .Where(u => u.Id != currentUserId)
+                .Where(u => u.UserName != currentUserName)
                 .Where(u => string.IsNullOrEmpty(request.SearchTerm) ||
                           u.UserName.Contains(request.SearchTerm) ||
                           u.Email.Contains(request.SearchTerm));
@@ -230,8 +230,8 @@ namespace CollabSphere.Modules.Follow.Service.Imp
                     Email = u.Email,
                     AvatarUrl = u.AvatarId,
                     Reputation = u.Reputation,
-                    IsFollowing = _context.Follows.Any(f => f.FollowerId == currentUserId && f.FollowingId == u.Id),
-                    IsBlocked = _context.UserBlocks.Any(b => b.BlockerId == currentUserId && b.BlockedId == u.Id)
+                    IsFollowing = _context.Follows.Any(f => f.Follower.UserName == currentUserName && f.Following.UserName == u.UserName),
+                    IsBlocked = _context.UserBlocks.Any(b => b.Blocker.UserName == currentUserName && b.Blocked.UserName == u.UserName)
                 })
                 .ToListAsync();
 
@@ -246,11 +246,10 @@ namespace CollabSphere.Modules.Follow.Service.Imp
             );
         }
 
-        public async Task<bool> RemoveFollowerAsync(Guid userId, Guid followerToRemoveId)
+        public async Task<bool> RemoveFollowerAsync(string userName, string followerToRemoveName)
         {
-            // Xóa mối quan hệ follow từ followerToRemoveId đến userId
             var follow = await _context.Follows
-                .FirstOrDefaultAsync(f => f.FollowerId == followerToRemoveId && f.FollowingId == userId);
+                .FirstOrDefaultAsync(f => f.Following.UserName == userName && f.Follower.UserName == followerToRemoveName);
 
             if (follow == null)
             {
@@ -262,51 +261,59 @@ namespace CollabSphere.Modules.Follow.Service.Imp
             return true;
         }
 
-        public async Task<bool> BlockUserAsync(Guid userId, Guid userToBlockId)
+        public async Task<bool> BlockUserAsync(string userName, string userToBlockName)
         {
-            // Kiểm tra xem đã block chưa
+            if (userName == userToBlockName)
+            {
+                throw new BadRequestException("Không thể chặn chính bạn");
+            }
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == userName);
+            var userToBlock = await _context.Users.FirstOrDefaultAsync(u => u.UserName == userToBlockName);
+
+            if (user == null || userToBlock == null)
+            {
+                throw new NotFoundException("Không tìm thấy người dùng");
+            }
+
             var existingBlock = await _context.UserBlocks
-                .FirstOrDefaultAsync(b => b.BlockerId == userId && b.BlockedId == userToBlockId);
+                .FirstOrDefaultAsync(b => b.Blocker.UserName == userName && b.Blocked.UserName == userToBlockName);
 
             if (existingBlock != null)
             {
-                return true; // Đã block rồi
+                throw new BadRequestException("Bạn đã chặn người dùng này rồi");
             }
 
-            // Tạo block mới
-            var newBlock = new UserBlock
+            // Tự động unfollow nếu đang follow
+            var existingFollow = await _context.Follows
+                .FirstOrDefaultAsync(f => (f.Follower.UserName == userName && f.Following.UserName == userToBlockName) ||
+                                        (f.Follower.UserName == userToBlockName && f.Following.UserName == userName));
+            if (existingFollow != null)
+            {
+                _context.Follows.Remove(existingFollow);
+            }
+
+            var block = new UserBlock
             {
                 Id = Guid.NewGuid(),
-                BlockerId = userId,
-                BlockedId = userToBlockId,
+                BlockerId = user.Id,
+                BlockedId = userToBlock.Id,
                 BlockedAt = DateTime.UtcNow,
-                CreatedBy = userId,
+                CreatedBy = user.Id,
                 CreatedOn = DateTime.UtcNow,
-                UpdatedBy = userId,
+                UpdatedBy = user.Id,
                 UpdatedOn = DateTime.UtcNow
             };
 
-            _context.UserBlocks.Add(newBlock);
-
-            // Xóa các mối quan hệ follow giữa hai người dùng
-            var follows = await _context.Follows
-                .Where(f => (f.FollowerId == userId && f.FollowingId == userToBlockId) ||
-                          (f.FollowerId == userToBlockId && f.FollowingId == userId))
-                .ToListAsync();
-
-            if (follows.Any())
-            {
-                _context.Follows.RemoveRange(follows);
-            }
-
+            _context.UserBlocks.Add(block);
             await _context.SaveChangesAsync();
             return true;
         }
 
-        public async Task<bool> UnblockUserAsync(Guid userId, Guid userToUnblockId)
+        public async Task<bool> UnblockUserAsync(string userName, string userToUnblockName)
         {
             var block = await _context.UserBlocks
-                .FirstOrDefaultAsync(b => b.BlockerId == userId && b.BlockedId == userToUnblockId);
+                .FirstOrDefaultAsync(b => b.Blocker.UserName == userName && b.Blocked.UserName == userToUnblockName);
 
             if (block == null)
             {
@@ -318,16 +325,20 @@ namespace CollabSphere.Modules.Follow.Service.Imp
             return true;
         }
 
-        public async Task<PaginationResponse<UserDto>> GetBlockedUsersAsync(Guid userId, int page = 1, int pageSize = 10)
+        public async Task<PaginationResponse<UserDto>> GetBlockedUsersAsync(string userName, int page = 1, int pageSize = 10)
         {
-            // Lấy tổng số người bị chặn
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.UserName == userName);
+            if (user == null)
+            {
+                throw new NotFoundException("Không tìm thấy người dùng");
+            }
+
             var totalBlocked = await _context.UserBlocks
-                .Where(b => b.BlockerId == userId)
+                .Where(b => b.Blocker.UserName == userName)
                 .CountAsync();
 
-            // Phân trang và lấy danh sách người bị chặn
             var blockedUsers = await _context.UserBlocks
-                .Where(b => b.BlockerId == userId)
+                .Where(b => b.Blocker.UserName == userName)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(b => new UserDto
@@ -337,8 +348,8 @@ namespace CollabSphere.Modules.Follow.Service.Imp
                     Email = b.Blocked.Email,
                     AvatarUrl = b.Blocked.AvatarId,
                     Reputation = b.Blocked.Reputation,
-                    IsFollowing = false, // Không thể follow người bị chặn
-                    IsBlocked = true
+                    IsBlocked = true,
+                    IsFollowing = false // Không thể following người bị block
                 })
                 .ToListAsync();
 

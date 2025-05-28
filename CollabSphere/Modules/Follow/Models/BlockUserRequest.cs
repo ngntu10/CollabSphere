@@ -4,6 +4,6 @@ namespace CollabSphere.Modules.Follow.Models
 {
     public class BlockUserRequest
     {
-        public Guid UserToBlockId { get; set; }
+        public string UserToBlockName { get; set; }
     }
 }
