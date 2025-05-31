@@ -10,22 +10,22 @@ namespace CollabSphere.Modules.Follow.Service
     public interface IFollowService
     {
         // Follow/Unfollow người dùng
-        Task<FollowDto> FollowUserAsync(Guid followerId, Guid followingId);
-        Task<bool> UnfollowUserAsync(Guid followerId, Guid followingId);
+        Task<FollowDto> FollowUserAsync(string followerName, string followingName);
+        Task<bool> UnfollowUserAsync(string followerName, string followingName);
 
         // Lấy danh sách người theo dõi và đang theo dõi
-        Task<PaginationResponse<UserDto>> GetFollowersAsync(Guid userId, int page = 1, int pageSize = 10);
-        Task<PaginationResponse<UserDto>> GetFollowingAsync(Guid userId, int page = 1, int pageSize = 10);
+        Task<PaginationResponse<UserDto>> GetFollowersAsync(string userName, int page = 1, int pageSize = 10);
+        Task<PaginationResponse<UserDto>> GetFollowingAsync(string userName, int page = 1, int pageSize = 10);
 
         // Tìm kiếm người dùng để follow
-        Task<PaginationResponse<UserDto>> SearchUsersToFollowAsync(Guid currentUserId, SearchUserRequest request);
+        Task<PaginationResponse<UserDto>> SearchUsersToFollowAsync(string currentUserName, SearchUserRequest request);
 
         // Quản lý người theo dõi
-        Task<bool> RemoveFollowerAsync(Guid userId, Guid followerToRemoveId);
+        Task<bool> RemoveFollowerAsync(string userName, string followerToRemoveName);
 
         // Chặn người dùng
-        Task<bool> BlockUserAsync(Guid userId, Guid userToBlockId);
-        Task<bool> UnblockUserAsync(Guid userId, Guid userToUnblockId);
-        Task<PaginationResponse<UserDto>> GetBlockedUsersAsync(Guid userId, int page = 1, int pageSize = 10);
+        Task<bool> BlockUserAsync(string userName, string userToBlockName);
+        Task<bool> UnblockUserAsync(string userName, string userToUnblockName);
+        Task<PaginationResponse<UserDto>> GetBlockedUsersAsync(string userName, int page = 1, int pageSize = 10);
     }
 }

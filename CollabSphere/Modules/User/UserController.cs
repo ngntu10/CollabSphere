@@ -71,6 +71,28 @@ public class UserController : ControllerBase
         }
     }
 
+    [HttpGet("getUser/{username}")]
+    public async Task<IActionResult> GetUserByUsername(string username)
+    {
+        try
+        {
+            var user = await _UserService.GetUserByUsernameAsync(username);
+
+            return Ok(ApiResponse<UserDto>.Success(
+                StatusCodes.Status200OK,
+                user,
+                "Lấy thông tin người dùng thành công"
+            ));
+        }
+        catch (NotFoundException ex)
+        {
+            return NotFound(ApiResponse<object>.Failure(
+                StatusCodes.Status404NotFound,
+                new List<string> { ex.Message }
+            ));
+        }
+    }
+
     // [HttpPost]
     // public async Task<IActionResult> CreateUser([FromBody] CreateUserDto createUserDto)
     // {
