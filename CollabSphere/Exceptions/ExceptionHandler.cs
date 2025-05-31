@@ -49,7 +49,7 @@ public class ExceptionHandler : IExceptionHandler
         var result = JsonConvert.SerializeObject(ApiResponse<string>.Failure(code, errors));
 
         context.Response.ContentType = "application/json";
-        context.Response.StatusCode = 200;
+        context.Response.StatusCode = code;
 
         return context.Response.WriteAsync(result, cancellationToken);
     }
