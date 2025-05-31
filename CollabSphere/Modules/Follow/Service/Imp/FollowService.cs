@@ -209,9 +209,8 @@ namespace CollabSphere.Modules.Follow.Service.Imp
 
         public async Task<PaginationResponse<UserDto>> SearchUsersToFollowAsync(string currentUserName, SearchUserRequest request)
         {
-            // Lấy danh sách user theo search term, loại trừ user hiện tại
+            // Lấy danh sách user theo search term
             var query = _context.Users
-                .Where(u => u.UserName != currentUserName)
                 .Where(u => string.IsNullOrEmpty(request.SearchTerm) ||
                           u.UserName.Contains(request.SearchTerm) ||
                           u.Email.Contains(request.SearchTerm));
