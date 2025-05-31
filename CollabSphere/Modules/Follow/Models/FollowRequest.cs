@@ -4,6 +4,6 @@ namespace CollabSphere.Modules.Follow.Models
 {
     public class FollowRequest
     {
-        public Guid FollowingId { get; set; }
+        public string FollowingName { get; set; }
     }
 }
