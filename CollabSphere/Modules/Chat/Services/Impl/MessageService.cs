@@ -32,23 +32,29 @@ namespace CollabSphere.Modules.Chat.Services.Impl
 
         public async Task<List<ChatRoomResponse>> GetConversationsAsync(Guid userId, List<string> activeUsers)
         {
-            var conversations = await (from m in _context.Messages
-                                       where (m.SenderId == userId || m.ReceiverId == userId) && !m.IsArchived
-                                       group m by m.SenderId == userId ? m.ReceiverId : m.SenderId into g
-                                       join u in _context.Users on g.Key equals u.Id into users
-                                       from u in users.DefaultIfEmpty()
-                                       let lastMessage = g.OrderByDescending(m => m.SentAt).FirstOrDefault()
-                                       select new ChatRoomResponse
-                                       {
-                                           PartnerId = g.Key,
-                                           PartnerName = u != null ? u.UserName : "Unknown",
-                                           PartnerAvatar = u != null ? u.AvatarId : string.Empty,
-                                           LastMessage = lastMessage != null ? lastMessage.Content : string.Empty,
-                                           LastMessageTime = lastMessage != null ? lastMessage.SentAt : DateTime.MinValue,
-                                           UnreadCount = g.Count(m => m.ReceiverId == userId && m.ReadStatus == false),
-                                           IsOnline = activeUsers != null && activeUsers.Contains(g.Key.ToString())
-                                       })
-                .ToListAsync();
+            var messages = await _context.Messages
+                .Where(m => (m.SenderId == userId || m.ReceiverId == userId) && !m.IsArchived)
+                .Include(m => m.Sender)
+                .Include(m => m.Receiver)
+                .ToListAsync(); // Chuyển sang client-side
+
+            var conversations = messages
+                .GroupBy(m => m.SenderId == userId ? m.ReceiverId : m.SenderId)
+                .Select(g => new ChatRoomResponse
+                {
+                    PartnerId = g.Key,
+                    PartnerName = g.First().SenderId == userId
+                        ? g.First().Receiver?.UserName ?? "Unknown"
+                        : g.First().Sender?.UserName ?? "Unknown",
+                    PartnerAvatar = g.First().SenderId == userId
+                        ? g.First().Receiver?.AvatarId ?? string.Empty
+                        : g.First().Sender?.AvatarId ?? string.Empty,
+                    LastMessage = g.OrderByDescending(m => m.SentAt).FirstOrDefault()?.Content ?? string.Empty,
+                    LastMessageTime = g.OrderByDescending(m => m.SentAt).FirstOrDefault()?.SentAt ?? DateTime.MinValue,
+                    UnreadCount = g.Count(m => m.ReceiverId == userId && !m.ReadStatus),
+                    IsOnline = activeUsers != null && activeUsers.Contains(g.Key.ToString())
+                })
+                .ToList();
 
             return conversations;
         }
