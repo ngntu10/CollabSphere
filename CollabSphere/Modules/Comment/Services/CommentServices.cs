@@ -143,6 +143,7 @@ public class CommentServices : ICommentService
     public async Task<CommentResponse> GetCommentByIdAsync(Guid commentId)
     {
         var comment = await _context.Comments
+            .Include(c => c.Votes).ThenInclude(v => v.User)
             .Include(c => c.ChildComments)
             .FirstOrDefaultAsync(c => c.Id == commentId);
 
@@ -381,9 +382,17 @@ public class CommentServices : ICommentService
 
         // Lấy tất cả comment của user
         var comments = await _context.Comments
+            .Include(c => c.Votes)
+                .ThenInclude(v => v.User)
+            .Include(c => c.User)
             .Include(c => c.ChildComments)
+                .ThenInclude(cc => cc.Votes)
+                    .ThenInclude(v => v.User)
+            .Include(c => c.ChildComments)
+                .ThenInclude(cc => cc.User)
             .Where(c => c.UserId == userId)
             .OrderByDescending(c => c.CreatedOn)
+            .AsSplitQuery()
             .ToListAsync();
 
         var response = new List<CommentResponse>();

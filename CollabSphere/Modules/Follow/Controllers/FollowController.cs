@@ -25,131 +25,131 @@ namespace CollabSphere.Modules.Follow.Controllers
         [HttpPost]
         public async Task<IActionResult> FollowUser(FollowRequest request)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            var userName = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrEmpty(userName))
             {
                 return Unauthorized();
             }
 
-            var follow = await _followService.FollowUserAsync(Guid.Parse(userId), request.FollowingId);
+            var follow = await _followService.FollowUserAsync(userName, request.FollowingName);
             return Ok(follow);
         }
 
-        [HttpDelete("{followingId}")]
-        public async Task<IActionResult> UnfollowUser(Guid followingId)
+        [HttpDelete("{followingName}")]
+        public async Task<IActionResult> UnfollowUser(string followingName)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            var userName = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrEmpty(userName))
             {
                 return Unauthorized();
             }
 
-            var result = await _followService.UnfollowUserAsync(Guid.Parse(userId), followingId);
+            var result = await _followService.UnfollowUserAsync(userName, followingName);
             return result ? Ok(new { message = "Đã hủy theo dõi thành công" }) : NotFound();
         }
 
         [HttpGet("followers")]
         public async Task<IActionResult> GetFollowers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            var userName = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrEmpty(userName))
             {
                 return Unauthorized();
             }
 
-            var followers = await _followService.GetFollowersAsync(Guid.Parse(userId), page, pageSize);
+            var followers = await _followService.GetFollowersAsync(userName, page, pageSize);
             return Ok(followers);
         }
 
         [HttpGet("following")]
         public async Task<IActionResult> GetFollowing([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            var userName = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrEmpty(userName))
             {
                 return Unauthorized();
             }
 
-            var following = await _followService.GetFollowingAsync(Guid.Parse(userId), page, pageSize);
+            var following = await _followService.GetFollowingAsync(userName, page, pageSize);
             return Ok(following);
         }
 
-        [HttpGet("users/{userId}/followers")]
-        public async Task<IActionResult> GetUserFollowers(Guid userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        [HttpGet("users/{userName}/followers")]
+        public async Task<IActionResult> GetUserFollowers(string userName, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var followers = await _followService.GetFollowersAsync(userId, page, pageSize);
+            var followers = await _followService.GetFollowersAsync(userName, page, pageSize);
             return Ok(followers);
         }
 
-        [HttpGet("users/{userId}/following")]
-        public async Task<IActionResult> GetUserFollowing(Guid userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+        [HttpGet("users/{userName}/following")]
+        public async Task<IActionResult> GetUserFollowing(string userName, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var following = await _followService.GetFollowingAsync(userId, page, pageSize);
+            var following = await _followService.GetFollowingAsync(userName, page, pageSize);
             return Ok(following);
         }
 
         [HttpGet("search")]
         public async Task<IActionResult> SearchUsers([FromQuery] SearchUserRequest request)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            var userName = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrEmpty(userName))
             {
                 return Unauthorized();
             }
 
-            var users = await _followService.SearchUsersToFollowAsync(Guid.Parse(userId), request);
+            var users = await _followService.SearchUsersToFollowAsync(userName, request);
             return Ok(users);
         }
 
-        [HttpDelete("followers/{followerId}")]
-        public async Task<IActionResult> RemoveFollower(Guid followerId)
+        [HttpDelete("followers/{followerName}")]
+        public async Task<IActionResult> RemoveFollower(string followerName)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            var userName = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrEmpty(userName))
             {
                 return Unauthorized();
             }
 
-            var result = await _followService.RemoveFollowerAsync(Guid.Parse(userId), followerId);
+            var result = await _followService.RemoveFollowerAsync(userName, followerName);
             return result ? Ok(new { message = "Đã xóa người theo dõi thành công" }) : NotFound();
         }
 
         [HttpPost("block")]
         public async Task<IActionResult> BlockUser(BlockUserRequest request)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            var userName = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrEmpty(userName))
             {
                 return Unauthorized();
             }
 
-            var result = await _followService.BlockUserAsync(Guid.Parse(userId), request.UserToBlockId);
+            var result = await _followService.BlockUserAsync(userName, request.UserToBlockName);
             return Ok(new { message = "Đã chặn người dùng thành công" });
         }
 
-        [HttpDelete("block/{userToUnblockId}")]
-        public async Task<IActionResult> UnblockUser(Guid userToUnblockId)
+        [HttpDelete("block/{userToUnblockName}")]
+        public async Task<IActionResult> UnblockUser(string userToUnblockName)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            var userName = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrEmpty(userName))
             {
                 return Unauthorized();
             }
 
-            var result = await _followService.UnblockUserAsync(Guid.Parse(userId), userToUnblockId);
+            var result = await _followService.UnblockUserAsync(userName, userToUnblockName);
             return result ? Ok(new { message = "Đã bỏ chặn người dùng thành công" }) : NotFound();
         }
 
         [HttpGet("blocked")]
         public async Task<IActionResult> GetBlockedUsers([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            if (string.IsNullOrEmpty(userId))
+            var userName = User.FindFirstValue(ClaimTypes.Name);
+            if (string.IsNullOrEmpty(userName))
             {
                 return Unauthorized();
             }
 
-            var blockedUsers = await _followService.GetBlockedUsersAsync(Guid.Parse(userId), page, pageSize);
+            var blockedUsers = await _followService.GetBlockedUsersAsync(userName, page, pageSize);
             return Ok(blockedUsers);
         }
     }

@@ -23,6 +23,7 @@ namespace CollabSphere.Modules.User.Service
         Task<IEnumerable<UserDto>> GetAllUsersAsync();
         // Task<Entities.Domain.User> CreateUserAsync(CreateUserDto createUserDto);
         Task<UserResponseModel> UpdateUserAsync(Guid id, UpdateUserDto updateDto, Guid updatedByUserId);
+        Task<UserDto> GetUserByUsernameAsync(string username);
     }
 
     public class UserService : IUserService
@@ -102,6 +103,17 @@ namespace CollabSphere.Modules.User.Service
                 Gender = user.Gender,
                 UpdatedOn = user.UpdatedOn,
             };
+        }
+
+        public async Task<UserDto> GetUserByUsernameAsync(string username)
+        {
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.UserName == username);
+
+            if (user == null)
+                throw new NotFoundException($"Không tìm thấy người dùng với username: {username}");
+
+            return _mapper.Map<UserDto>(user);
         }
     }
 }
